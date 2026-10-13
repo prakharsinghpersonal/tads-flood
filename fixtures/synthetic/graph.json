@@ -1,0 +1,9 @@
+{
+  "nodes": [{"node_id": "a"}, {"node_id": "b"}, {"node_id": "h"}],
+  "edges": [
+    {"edge_id": "road-a", "from_node": "a", "to_node": "b", "length_m": 100, "directed": false, "candidate_blocked": false, "evidence_ids": []},
+    {"edge_id": "bridge-a", "from_node": "b", "to_node": "h", "length_m": 100, "directed": false, "candidate_blocked": true, "evidence_ids": ["synthetic-exposure-001"]}
+  ],
+  "settlements": [{"location_id": "training-settlement-a", "node_id": "a"}],
+  "facilities": [{"location_id": "training-hospital", "node_id": "h"}]
+}

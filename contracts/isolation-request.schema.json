@@ -1,0 +1,130 @@
+{
+  "$defs": {
+    "GraphLocation": {
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "title": "Location Id",
+          "type": "string"
+        },
+        "node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Node Id"
+        }
+      },
+      "required": [
+        "location_id",
+        "node_id"
+      ],
+      "title": "GraphLocation",
+      "type": "object"
+    },
+    "Node": {
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "title": "Node Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_id"
+      ],
+      "title": "Node",
+      "type": "object"
+    },
+    "RoadEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "edge_id": {
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "from_node": {
+          "title": "From Node",
+          "type": "string"
+        },
+        "to_node": {
+          "title": "To Node",
+          "type": "string"
+        },
+        "length_m": {
+          "exclusiveMinimum": 0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "directed": {
+          "default": false,
+          "title": "Directed",
+          "type": "boolean"
+        },
+        "candidate_blocked": {
+          "default": false,
+          "title": "Candidate Blocked",
+          "type": "boolean"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "edge_id",
+        "from_node",
+        "to_node",
+        "length_m"
+      ],
+      "title": "RoadEdge",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/Node"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/RoadEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
+    "settlements": {
+      "items": {
+        "$ref": "#/$defs/GraphLocation"
+      },
+      "title": "Settlements",
+      "type": "array"
+    },
+    "facilities": {
+      "items": {
+        "$ref": "#/$defs/GraphLocation"
+      },
+      "title": "Facilities",
+      "type": "array"
+    }
+  },
+  "required": [
+    "nodes",
+    "edges",
+    "settlements",
+    "facilities"
+  ],
+  "title": "IsolationRequest",
+  "type": "object"
+}

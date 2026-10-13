@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "assessment_id": "synthetic-training-001",
+  "mode": "synthetic",
+  "event_date": "2026-08-26",
+  "bbox": [
+    85.25,
+    27.85,
+    85.27,
+    27.87
+  ],
+  "generated_at": "2026-10-13T12:00:00Z",
+  "sources": [
+    {
+      "source_id": "synthetic-graph-001",
+      "kind": "synthetic",
+      "acquired_at": "2026-08-25T12:00:00Z",
+      "uri": "synthetic://training-graph-001",
+      "license": "MIT; original synthetic fixture",
+      "sha256": "00a05b52a50516b7e3db1b693b7a0a53cd5551b3cab1d07c6ad0d495421f13f4",
+      "usage": "input"
+    }
+  ],
+  "quality": {
+    "status": "partial",
+    "valid_fraction": 1.0,
+    "warnings": [
+      "Synthetic graph-only fixture. No real imagery or asset polygons are included."
+    ],
+    "method_version": "synthetic-graph-v1"
+  },
+  "summary": {
+    "candidate_flood_area_m2": null,
+    "exposed_asset_count": null,
+    "potentially_isolated_count": 1,
+    "unknown_network_count": 0
+  },
+  "layers": {
+    "flood": {
+      "type": "FeatureCollection",
+      "features": []
+    },
+    "debris": {
+      "type": "FeatureCollection",
+      "features": []
+    },
+    "roads": {
+      "type": "FeatureCollection",
+      "features": []
+    },
+    "buildings": {
+      "type": "FeatureCollection",
+      "features": []
+    },
+    "settlements": {
+      "type": "FeatureCollection",
+      "features": []
+    }
+  },
+  "settlements": [
+    {
+      "settlement_id": "training-settlement-a",
+      "status": "potentially_isolated",
+      "baseline_facility_id": "training-hospital",
+      "baseline_route_edge_ids": [
+        "road-a",
+        "bridge-a"
+      ],
+      "post_event_facility_id": null,
+      "post_event_route_edge_ids": [],
+      "candidate_cut_edge_ids": [
+        "bridge-a"
+      ],
+      "any_facility_access": false,
+      "evidence_ids": [
+        "synthetic-exposure-001"
+      ],
+      "reason": "The synthetic graph loses all facility routes if bridge-a is impassable. This is not a real flood finding."
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "synthetic-exposure-001",
+      "source_ids": [
+        "synthetic-graph-001"
+      ],
+      "kind": "synthetic",
+      "description": "An invented blocked-edge scenario used to test route isolation logic.",
+      "method_version": "synthetic-graph-v1"
+    }
+  ],
+  "limitations": [
+    "Synthetic fixture; no assertion about the real area represented by this bounding box.",
+    "No satellite detection, official-reference evaluation or actual drone telemetry.",
+    "Candidate exposure is not confirmed structural damage or road closure."
+  ]
+}

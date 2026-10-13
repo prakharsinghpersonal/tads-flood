@@ -1,0 +1,445 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "inferred",
+            "measured",
+            "synthetic"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "method_version": {
+          "title": "Method Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "source_ids",
+        "kind",
+        "description",
+        "method_version"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "FeatureCollection": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "FeatureCollection",
+          "default": "FeatureCollection",
+          "title": "Type",
+          "type": "string"
+        },
+        "features": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Features",
+          "type": "array"
+        }
+      },
+      "required": [
+        "features"
+      ],
+      "title": "FeatureCollection",
+      "type": "object"
+    },
+    "Layers": {
+      "additionalProperties": false,
+      "properties": {
+        "flood": {
+          "$ref": "#/$defs/FeatureCollection"
+        },
+        "debris": {
+          "$ref": "#/$defs/FeatureCollection"
+        },
+        "roads": {
+          "$ref": "#/$defs/FeatureCollection"
+        },
+        "buildings": {
+          "$ref": "#/$defs/FeatureCollection"
+        },
+        "settlements": {
+          "$ref": "#/$defs/FeatureCollection"
+        }
+      },
+      "required": [
+        "flood",
+        "debris",
+        "roads",
+        "buildings",
+        "settlements"
+      ],
+      "title": "Layers",
+      "type": "object"
+    },
+    "Quality": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "usable",
+            "partial",
+            "unavailable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "valid_fraction": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Valid Fraction",
+          "type": "number"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "method_version": {
+          "title": "Method Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "valid_fraction",
+        "warnings",
+        "method_version"
+      ],
+      "title": "Quality",
+      "type": "object"
+    },
+    "SettlementResult": {
+      "additionalProperties": false,
+      "properties": {
+        "settlement_id": {
+          "title": "Settlement Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "connected",
+            "potentially_isolated",
+            "preexisting_disconnected",
+            "unknown_network"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "baseline_facility_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Baseline Facility Id"
+        },
+        "baseline_route_edge_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Baseline Route Edge Ids",
+          "type": "array"
+        },
+        "post_event_facility_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Post Event Facility Id"
+        },
+        "post_event_route_edge_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Post Event Route Edge Ids",
+          "type": "array"
+        },
+        "candidate_cut_edge_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidate Cut Edge Ids",
+          "type": "array"
+        },
+        "any_facility_access": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Any Facility Access"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "settlement_id",
+        "status",
+        "baseline_facility_id",
+        "baseline_route_edge_ids",
+        "post_event_facility_id",
+        "post_event_route_edge_ids",
+        "candidate_cut_edge_ids",
+        "any_facility_access",
+        "evidence_ids",
+        "reason"
+      ],
+      "title": "SettlementResult",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "sentinel_1",
+            "sentinel_2",
+            "osm",
+            "dem",
+            "synthetic"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "acquired_at": {
+          "format": "date-time",
+          "title": "Acquired At",
+          "type": "string"
+        },
+        "uri": {
+          "title": "Uri",
+          "type": "string"
+        },
+        "license": {
+          "title": "License",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "usage": {
+          "default": "input",
+          "enum": [
+            "input",
+            "evaluation_only"
+          ],
+          "title": "Usage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "kind",
+        "acquired_at",
+        "uri",
+        "license",
+        "sha256"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "Summary": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_flood_area_m2": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Flood Area M2"
+        },
+        "exposed_asset_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposed Asset Count"
+        },
+        "potentially_isolated_count": {
+          "minimum": 0,
+          "title": "Potentially Isolated Count",
+          "type": "integer"
+        },
+        "unknown_network_count": {
+          "minimum": 0,
+          "title": "Unknown Network Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "potentially_isolated_count",
+        "unknown_network_count"
+      ],
+      "title": "Summary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "assessment_id": {
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "synthetic",
+        "live",
+        "cached_live"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "event_date": {
+      "format": "date",
+      "title": "Event Date",
+      "type": "string"
+    },
+    "bbox": {
+      "maxItems": 4,
+      "minItems": 4,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Bbox",
+      "type": "array"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/Source"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "quality": {
+      "$ref": "#/$defs/Quality"
+    },
+    "summary": {
+      "$ref": "#/$defs/Summary"
+    },
+    "layers": {
+      "$ref": "#/$defs/Layers"
+    },
+    "settlements": {
+      "items": {
+        "$ref": "#/$defs/SettlementResult"
+      },
+      "title": "Settlements",
+      "type": "array"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "assessment_id",
+    "mode",
+    "event_date",
+    "bbox",
+    "generated_at",
+    "sources",
+    "quality",
+    "summary",
+    "layers",
+    "settlements",
+    "evidence",
+    "limitations"
+  ],
+  "title": "Assessment",
+  "type": "object"
+}

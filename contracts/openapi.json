@@ -1,0 +1,878 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TADS Flood",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo": {
+      "get": {
+        "summary": "Get Demo",
+        "operationId": "get_demo_api_v1_demo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Assessment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments": {
+      "post": {
+        "summary": "Create Assessment",
+        "operationId": "create_assessment_api_v1_assessments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessment_id}": {
+      "get": {
+        "summary": "Get Assessment",
+        "operationId": "get_assessment_api_v1_assessments__assessment_id__get",
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assessment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Assessment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/isolation": {
+      "post": {
+        "summary": "Isolation",
+        "operationId": "isolation_api_v1_isolation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IsolationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SettlementResult"
+                  },
+                  "type": "array",
+                  "title": "Response Isolation Api V1 Isolation Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/report": {
+      "get": {
+        "summary": "Report",
+        "operationId": "report_api_v1_assessments__assessment_id__report_get",
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assessment Id"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "en",
+              "title": "Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Assessment": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0.0",
+            "title": "Schema Version",
+            "default": "1.0.0"
+          },
+          "assessment_id": {
+            "type": "string",
+            "title": "Assessment Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "synthetic",
+              "live",
+              "cached_live"
+            ],
+            "title": "Mode"
+          },
+          "event_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Event Date"
+          },
+          "bbox": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "layers": {
+            "$ref": "#/components/schemas/Layers"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/SettlementResult"
+            },
+            "type": "array",
+            "title": "Settlements"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assessment_id",
+          "mode",
+          "event_date",
+          "bbox",
+          "generated_at",
+          "sources",
+          "quality",
+          "summary",
+          "layers",
+          "settlements",
+          "evidence",
+          "limitations"
+        ],
+        "title": "Assessment"
+      },
+      "AssessmentRequest": {
+        "properties": {
+          "bbox": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox"
+          },
+          "event_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Event Date"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "synthetic",
+              "live"
+            ],
+            "title": "Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bbox",
+          "event_date",
+          "mode"
+        ],
+        "title": "AssessmentRequest"
+      },
+      "Evidence": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Source Ids"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "inferred",
+              "measured",
+              "synthetic"
+            ],
+            "title": "Kind"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "method_version": {
+            "type": "string",
+            "title": "Method Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "source_ids",
+          "kind",
+          "description",
+          "method_version"
+        ],
+        "title": "Evidence"
+      },
+      "FeatureCollection": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "FeatureCollection",
+            "title": "Type",
+            "default": "FeatureCollection"
+          },
+          "features": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Features"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "features"
+        ],
+        "title": "FeatureCollection"
+      },
+      "GraphLocation": {
+        "properties": {
+          "location_id": {
+            "type": "string",
+            "title": "Location Id"
+          },
+          "node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "location_id",
+          "node_id"
+        ],
+        "title": "GraphLocation"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IsolationRequest": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/RoadEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/GraphLocation"
+            },
+            "type": "array",
+            "title": "Settlements"
+          },
+          "facilities": {
+            "items": {
+              "$ref": "#/components/schemas/GraphLocation"
+            },
+            "type": "array",
+            "title": "Facilities"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges",
+          "settlements",
+          "facilities"
+        ],
+        "title": "IsolationRequest"
+      },
+      "Layers": {
+        "properties": {
+          "flood": {
+            "$ref": "#/components/schemas/FeatureCollection"
+          },
+          "debris": {
+            "$ref": "#/components/schemas/FeatureCollection"
+          },
+          "roads": {
+            "$ref": "#/components/schemas/FeatureCollection"
+          },
+          "buildings": {
+            "$ref": "#/components/schemas/FeatureCollection"
+          },
+          "settlements": {
+            "$ref": "#/components/schemas/FeatureCollection"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "flood",
+          "debris",
+          "roads",
+          "buildings",
+          "settlements"
+        ],
+        "title": "Layers"
+      },
+      "Node": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "node_id"
+        ],
+        "title": "Node"
+      },
+      "Quality": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "usable",
+              "partial",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "valid_fraction": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Valid Fraction"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "method_version": {
+            "type": "string",
+            "title": "Method Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "valid_fraction",
+          "warnings",
+          "method_version"
+        ],
+        "title": "Quality"
+      },
+      "RoadEdge": {
+        "properties": {
+          "edge_id": {
+            "type": "string",
+            "title": "Edge Id"
+          },
+          "from_node": {
+            "type": "string",
+            "title": "From Node"
+          },
+          "to_node": {
+            "type": "string",
+            "title": "To Node"
+          },
+          "length_m": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Length M"
+          },
+          "directed": {
+            "type": "boolean",
+            "title": "Directed",
+            "default": false
+          },
+          "candidate_blocked": {
+            "type": "boolean",
+            "title": "Candidate Blocked",
+            "default": false
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edge_id",
+          "from_node",
+          "to_node",
+          "length_m"
+        ],
+        "title": "RoadEdge"
+      },
+      "SettlementResult": {
+        "properties": {
+          "settlement_id": {
+            "type": "string",
+            "title": "Settlement Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "potentially_isolated",
+              "preexisting_disconnected",
+              "unknown_network"
+            ],
+            "title": "Status"
+          },
+          "baseline_facility_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Facility Id"
+          },
+          "baseline_route_edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Baseline Route Edge Ids"
+          },
+          "post_event_facility_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Event Facility Id"
+          },
+          "post_event_route_edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Post Event Route Edge Ids"
+          },
+          "candidate_cut_edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Candidate Cut Edge Ids"
+          },
+          "any_facility_access": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Any Facility Access"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "settlement_id",
+          "status",
+          "baseline_facility_id",
+          "baseline_route_edge_ids",
+          "post_event_facility_id",
+          "post_event_route_edge_ids",
+          "candidate_cut_edge_ids",
+          "any_facility_access",
+          "evidence_ids",
+          "reason"
+        ],
+        "title": "SettlementResult"
+      },
+      "Source": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "sentinel_1",
+              "sentinel_2",
+              "osm",
+              "dem",
+              "synthetic"
+            ],
+            "title": "Kind"
+          },
+          "acquired_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Acquired At"
+          },
+          "uri": {
+            "type": "string",
+            "title": "Uri"
+          },
+          "license": {
+            "type": "string",
+            "title": "License"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256"
+          },
+          "usage": {
+            "type": "string",
+            "enum": [
+              "input",
+              "evaluation_only"
+            ],
+            "title": "Usage",
+            "default": "input"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_id",
+          "kind",
+          "acquired_at",
+          "uri",
+          "license",
+          "sha256"
+        ],
+        "title": "Source"
+      },
+      "Summary": {
+        "properties": {
+          "candidate_flood_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Flood Area M2"
+          },
+          "exposed_asset_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposed Asset Count"
+          },
+          "potentially_isolated_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Potentially Isolated Count"
+          },
+          "unknown_network_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unknown Network Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "potentially_isolated_count",
+          "unknown_network_count"
+        ],
+        "title": "Summary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
