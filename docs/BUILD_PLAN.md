@@ -100,6 +100,10 @@ Historical OSM comes from ohsome extraction. Validate its returned snapshot
 against the event, including each cache manifest. Current OSM is not a fallback.
 Pin client behaviour against observed API responses; v1 documentation currently
 redirects to v2, so probe service metadata before choosing an endpoint version.
+The live access check found v1 metadata available but legacy extraction returned
+403. Use the documented v2 API with the user's free `OHSOME_API_KEY`, and convert
+its GeoParquet extraction format into our internal geometry models. v2 access
+is not yet verified; details and links are in DATA_POLICY.md.
 
 ## 5. Data and algorithm decisions
 
@@ -241,4 +245,3 @@ Finish with a three-minute evidence-led demo, one-page generated situation repor
 six-page technical report, source manifest, test results, setup instructions,
 AI/reuse disclosure and required attributions. No invented metrics or untested
 claims about rescue improvement. See `docs/DEMO_PLAN.md` for the timed sequence.
-
