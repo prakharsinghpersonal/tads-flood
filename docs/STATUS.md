@@ -27,6 +27,11 @@ Live providers: not yet connected. Real geographic evaluation: not run.
 AI bilingual generation: not yet implemented. Flight hardware: not supported.
 Claude: handoff prepared; start status must be reported by Claude itself.
 
+GitHub foundation CI passed. Starter API was started locally at 127.0.0.1:8000
+and its health endpoint was checked. ohsome v1 metadata confirmed historical
+coverage, but actual legacy road extraction returned HTTP 403. The documented
+v2 path needs a free API key and GeoParquet handling; extraction remains unverified.
+
 ## Next checkpoints
 
 - Publish the first API/graph/scene-quality foundation slice and handoff branches.

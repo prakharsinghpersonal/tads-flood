@@ -20,6 +20,18 @@
 - PX4 autonomous mission background: https://docs.px4.io/main/en/flight_modes_mc/mission
 - PX4 failsafes background: https://docs.px4.io/main/en/config/safety
 
+Current ohsome v2 migration/authentication guide:
+https://docs.ohsome.org/ohsome-api/v2/migration_guide.html
+
+Checked in this session: v1 `/metadata` succeeds, identifies API 1.10.4 and
+history through 2026-07-27T09:00Z. Both GET and POST attempts at the brief's v1
+geometry extraction returned HTTP 403. This does not prove v2 extraction works.
+The official v2 guide requires a free API key and currently names
+`https://api.heigit.org/ohsome-api/v2-rc/`; extraction returns GeoParquet, not the
+old v1 GeoJSON shape. Implement the adapter against documented/observed v2
+responses. Configure `OHSOME_API_KEY` server-side and verify quotas. Do not keep
+retrying denied legacy extraction or replace historical OSM with current OSM.
+
 These references describe possible integrations. A link in this file does not
 mean that credentials, quotas, processed imagery, mission hardware or reference
 products have been verified. CDSE requires the user's own access configuration.
@@ -70,4 +82,3 @@ copilot route does not require claiming those datasets were used.
 We do not contact organizers or post messages automatically. Research reuse,
 live source access and official reference verification remain explicit release
 risks. Do not claim a successful rescue or predict a glacier collapse.
-

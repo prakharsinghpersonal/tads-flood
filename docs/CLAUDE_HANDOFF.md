@@ -75,6 +75,12 @@ to `http://127.0.0.1:8000`; use `VITE_API_BASE_URL`, which may contain only a pu
 origin. Never expose CDSE/LLM credentials as VITE variables. Configure Vite proxy
 for `/api` and `/health`; use fixture mode while Codex builds the service.
 
+Live source update: ohsome v1 metadata is reachable, but legacy geometry
+extraction returned 403. Current v2 needs the user's free `OHSOME_API_KEY` and
+returns GeoParquet. CDSE/ohsome/LLM credentials remain server-side. This source
+dependency does not block your fixture-based map/interface work. Codex's starter
+API is running at `http://127.0.0.1:8000`; live mode still fails explicitly.
+
 ## First work to perform
 
 1. Read `BUILD_PLAN.md`, `API_CONTRACT.md`, `TEST_MATRIX.md`, `DATA_POLICY.md`,
@@ -159,4 +165,3 @@ Return the ready commit hash, paths, commands, screenshots, contract proposals a
 any blockers to the human. The Claude CLI was not found in Codex's shell, so this
 handoff is prepared for the human to start you in Claude Code; do not assume a
 background Claude process was already launched.
-
