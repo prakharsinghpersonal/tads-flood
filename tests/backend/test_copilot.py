@@ -83,3 +83,41 @@ def test_printable_brief_escapes_external_labels():
     assert "<script>" not in html
     assert "&lt;script&gt;" in html
     assert "SYNTHETIC TRAINING SCENE" in html
+
+
+def test_key_free_local_ollama_uses_schema_and_the_same_grounding_gate():
+    captured = []
+    def handler(request):
+        captured.append(request)
+        return httpx.Response(200, json={"done": True, "done_reason": "stop", "message": {
+            "content": json.dumps({"fact_ids": ["summary/potentially_isolated"], "refused": False})}})
+    local = Settings(llm_provider="ollama", llm_model="installed-model", llm_base_url="http://127.0.0.1:11434")
+    assert local.ai_ready
+    answer = generate_answer(demo(), "Which settlements may be isolated?", "ne", local,
+        client=httpx.Client(transport=httpx.MockTransport(handler)))
+    assert str(captured[0].url) == "http://127.0.0.1:11434/api/chat"
+    assert "Authorization" not in captured[0].headers
+    body = json.loads(captured[0].content)
+    assert body["stream"] is False and body["format"]["additionalProperties"] is False
+    assert answer["generator"] == "llm_fact_selection" and answer["translation_reviewed"] is False
+    assert answer["facts"] == demo().summary.model_dump()
+
+
+@pytest.mark.parametrize("origin", ["http://model.example", "http://localhost:11434", "http://127.0.0.1:11434/v1",
+                                   "http://127.0.0.1:11434?key=secret", "http://user:password@127.0.0.1:11434"])
+def test_local_model_configuration_cannot_fetch_non_loopback_origins(origin):
+    local = Settings(llm_provider="ollama", llm_model="model", llm_base_url=origin)
+    with pytest.raises(PipelineError, match="loopback"):
+        generate_answer(demo(), "Summarize", "en", local)
+
+
+@pytest.mark.parametrize("response", [
+    {"done": False, "done_reason": "stop", "message": {"content": "{}"}},
+    {"done": True, "done_reason": "length", "message": {"content": "{}"}},
+    {"done": True, "done_reason": "stop", "message": {"content": '{"fact_ids":["invented"],"refused":false}'}},
+])
+def test_local_model_incomplete_and_unsupported_facts_are_rejected(response):
+    local = Settings(llm_provider="ollama", llm_model="model", llm_base_url="http://127.0.0.1:11434")
+    with pytest.raises(PipelineError):
+        generate_answer(demo(), "Summarize", "en", local,
+                        client=httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=response))))

@@ -16,6 +16,7 @@ class Settings:
     llm_api_key: str = field(default="", repr=False)
     llm_model: str = ""
     llm_base_url: str = ""
+    llm_provider: str = "openai"
     data_root: Path = ROOT / "data/cache/runtime"
 
     @classmethod
@@ -27,6 +28,7 @@ class Settings:
                    llm_api_key=os.getenv("LLM_API_KEY", ""),
                    llm_model=os.getenv("LLM_MODEL", ""),
                    llm_base_url=os.getenv("LLM_BASE_URL", ""),
+                   llm_provider=os.getenv("LLM_PROVIDER", "openai"),
                    data_root=Path(os.getenv("TADS_DATA_ROOT", str(ROOT / "data/cache/runtime"))))
 
     @property
@@ -35,6 +37,8 @@ class Settings:
 
     @property
     def ai_ready(self):
+        if self.llm_provider == "ollama":
+            return bool(self.llm_model and self.llm_base_url)
         return bool(self.llm_api_key and self.llm_model and self.llm_base_url)
 
     def readiness(self):

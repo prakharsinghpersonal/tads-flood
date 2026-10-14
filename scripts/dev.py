@@ -64,7 +64,7 @@ def main():
                     raise RuntimeError("API did not start. Install the backend lockfile and editable package.")
                 time.sleep(.25)
         web_environment = dict(os.environ)
-        for key in ["CDSE_CLIENT_ID", "CDSE_CLIENT_SECRET", "OHSOME_API_KEY", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "TADS_DATA_ROOT"]:
+        for key in ["CDSE_CLIENT_ID", "CDSE_CLIENT_SECRET", "OHSOME_API_KEY", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_PROVIDER", "TADS_DATA_ROOT"]:
             web_environment.pop(key, None)
         web_environment["VITE_API_BASE_URL"] = f"http://127.0.0.1:{args.api_port}"
         children.append(subprocess.Popen(["npm", "run", "dev", "--", "--host", "127.0.0.1",

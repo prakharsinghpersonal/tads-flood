@@ -98,7 +98,14 @@ def generate_answer(assessment, question, language, settings, *, client=None):
         raise PipelineError("ai_not_configured", "Configure a server-side model, endpoint and API key.")
     base = settings.llm_base_url.rstrip("/")
     parsed = urlsplit(base)
-    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+    local = settings.llm_provider == "ollama"
+    if settings.llm_provider not in ("openai", "ollama"):
+        raise PipelineError("invalid_ai_configuration", "Supported model providers are openai and ollama.")
+    valid_url = (parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "::1")
+                 and parsed.path in ("", "/")) if local else parsed.scheme == "https"
+    if not valid_url or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        if local:
+            raise PipelineError("invalid_ai_configuration", "Ollama must use an operator-configured literal loopback HTTP origin.")
         raise PipelineError("invalid_ai_configuration", "The model endpoint must be an operator-configured HTTPS base URL.")
     facts = approved_facts(assessment)
     # Select a bounded evidence menu, keeping exact-name matches first. The full
@@ -107,7 +114,7 @@ def generate_answer(assessment, question, language, settings, *, client=None):
                     1 if any(word in question.lower() for word in facts[key]["text_en"].lower().split()[:4]) else 2, key))[:80]
     menu = [facts[key] for key in ranked]
     schema = {"type": "object", "properties": {
-        "fact_ids": {"type": "array", "items": {"type": "string", "enum": ranked}},
+        "fact_ids": {"type": "array", "maxItems": 20, "items": {"type": "string", "enum": ranked}},
         "refused": {"type": "boolean"}}, "required": ["fact_ids", "refused"], "additionalProperties": False}
     body = {"model": settings.llm_model, "max_completion_tokens": 2000,
             "response_format": {"type": "json_schema", "json_schema": {
@@ -119,19 +126,28 @@ def generate_answer(assessment, question, language, settings, *, client=None):
                 "numbers, outside facts or citations. Refuse unsupported questions. "
                 "A candidate flooded road is not a verified closure. No casualty estimates."},
                 {"role": "user", "content": json.dumps({"question": question, "facts": menu}, ensure_ascii=False)}]}
+    if local:
+        body = {"model": settings.llm_model, "messages": body["messages"], "stream": False,
+                "format": schema, "options": {"temperature": 0, "num_predict": 768, "num_ctx": 8192},
+                "keep_alive": "5m"}
     owned = client is None
     client = client or httpx.Client(timeout=httpx.Timeout(60, connect=10), follow_redirects=False)
     try:
-        raw = request_bytes(client, "POST", base + "/chat/completions", max_bytes=200000,
-                            json=body, headers={"Authorization": "Bearer " + settings.llm_api_key})
+        raw = request_bytes(client, "POST", base + ("/api/chat" if local else "/chat/completions"), max_bytes=200000,
+                            json=body, headers={} if local else {"Authorization": "Bearer " + settings.llm_api_key})
         result = safe_json(raw)
         try:
-            choice = result["choices"][0]
-            message = choice["message"]
+            if local:
+                if result.get("done") is not True or result.get("done_reason") != "stop":
+                    raise PipelineError("incomplete_model_output", "Local model response did not finish completely.")
+                message = result["message"]
+            else:
+                choice = result["choices"][0]
+                message = choice["message"]
             if message.get("refusal"):
                 selection = FactSelection(fact_ids=[], refused=True)
             else:
-                if choice.get("finish_reason") != "stop":
+                if not local and choice.get("finish_reason") != "stop":
                     raise PipelineError("incomplete_model_output", "Model response did not finish completely.")
                 selection = FactSelection.model_validate_json(message["content"])
                 if not set(selection.fact_ids) <= set(ranked):

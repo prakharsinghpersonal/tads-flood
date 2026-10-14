@@ -34,6 +34,7 @@ def main():
     environment = dict(os.environ)
     # Empty values prevent load_dotenv(override=False) from reading operator keys.
     environment.update({key: "" for key in CREDENTIALS})
+    environment["LLM_PROVIDER"] = "openai"
     with TemporaryDirectory(prefix="tads-integration-") as temporary:
         environment["TADS_DATA_ROOT"] = temporary
         with open(Path(temporary) / "api.log", "w+") as log:
