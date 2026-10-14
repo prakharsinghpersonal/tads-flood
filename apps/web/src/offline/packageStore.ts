@@ -64,8 +64,10 @@ export function db() {
   });
   return dbPromise;
 }
-export function resetDbForTests() {
+export async function resetDbForTests() {
+  const previous = dbPromise;
   dbPromise = null;
+  if (previous) (await previous).close();
 }
 
 export async function sha256(text: string): Promise<string> {
@@ -86,7 +88,7 @@ export class PackageIntegrityError extends Error {}
 export async function createPackage(loaded: LoadedAssessment, client: ApiClient | null): Promise<PackageManifest> {
   const a = loaded.assessment;
   const created_at = new Date().toISOString();
-  const package_id = `pkg-${a.assessment_id}-${created_at.replace(/[^0-9]/g, '').slice(0, 14)}`;
+  const package_id = `pkg-${a.assessment_id}-${crypto.randomUUID()}`;
   const texts: Record<string, { text: string; media_type: string }> = {
     assessment: { text: JSON.stringify(a), media_type: 'application/json' },
   };

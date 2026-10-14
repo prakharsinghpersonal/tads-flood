@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createClient } from '../api/client';
 import { loadBundledFixture } from '../components/PreparePanel';
 import { createSim, step } from '../mission/sim';
@@ -16,10 +16,12 @@ import {
 } from './packageStore';
 
 beforeEach(async () => {
-  resetDbForTests();
-  await new Promise((r) => {
+  await resetDbForTests();
+  await new Promise((resolve, reject) => {
     const req = indexedDB.deleteDatabase('tads-flood');
-    req.onsuccess = req.onerror = req.onblocked = r;
+    req.onsuccess = resolve;
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('Test database still has an open connection'));
   });
 });
 
@@ -45,7 +47,7 @@ describe('offline package store', () => {
     ]);
     expect(await lastPackageId()).toBe(m.package_id);
 
-    resetDbForTests();
+    await resetDbForTests();
     const pkg = await openPackage(m.package_id);
     expect(pkg.loaded.channel).toBe('offline_package');
     expect(pkg.loaded.assessment).toEqual(loaded.assessment);
@@ -68,7 +70,7 @@ describe('offline package store', () => {
     const m = await createPackage(loaded, null);
     const sim = step(step(createSim(loaded.assessment, loaded.assessment.bbox)));
     await saveMission(m.package_id, sim);
-    resetDbForTests();
+    await resetDbForTests();
     expect(await loadMission(m.package_id)).toEqual(sim);
     const pkg = await openPackage(m.package_id);
     expect(pkg.loaded.assessment).toEqual(loaded.assessment);
@@ -76,5 +78,20 @@ describe('offline package store', () => {
     expect(await listPackages()).toEqual([]);
     expect(await loadMission(m.package_id)).toBeNull();
     expect(await lastPackageId()).toBeNull();
+  });
+
+  it('preserves separate packages when two saves have the same timestamp', async () => {
+    const clock = vi.spyOn(Date.prototype, 'toISOString').mockReturnValue('2026-10-14T03:00:00.000Z');
+    try {
+      const loaded = loadBundledFixture();
+      const first = await createPackage(loaded, null);
+      const second = await createPackage(loaded, null);
+      expect(first.package_id).not.toBe(second.package_id);
+      expect(await listPackages()).toHaveLength(2);
+      await deletePackage(first.package_id);
+      expect((await openPackage(second.package_id)).loaded.assessment).toEqual(loaded.assessment);
+    } finally {
+      clock.mockRestore();
+    }
   });
 });
