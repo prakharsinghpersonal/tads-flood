@@ -1,40 +1,76 @@
 # Codex status
 
-Planning: complete initial two-half plan, API boundary, Claude handoff, test
-matrix, data policy and timed demo. Foundation implemented on `codex/data-engine`.
-Generated contracts and fixture are shared baseline assets on `main`.
+Backend checkpoint on `codex/data-engine`; draft PR:
+https://github.com/prakharsinghpersonal/tads-flood/pull/1.
+Planning and shared foundation are on main; computed backend work is on this
+branch. Assessment schema remains 1.0.0. See the runtime coordination note for
+Claude's additive integration endpoints and the response to its proposal.
 
-## Verified first slice
+## Implemented and verified locally
 
-- FastAPI: health, explicit synthetic fixture, assessment lookup, graph-isolation
-  endpoint, and an explicitly deterministic English report.
-- Typed request/assessment validation, source/evidence references, synthetic/live
-  boundary and pre-event OSM enforcement.
-- Shortest-path analysis distinguishes candidate isolation, alternate/farther
-  facility access, pre-existing disconnection and unknown graph locations.
-- Radar pair validation rejects mismatched orbit/polarization/grid/date; toy
-  candidate-water cells preserve nodata and exclude already-dark water.
-- `python -m pytest`: **42 passed**, Python 3.12.14. One upstream TestClient
-  deprecation warning; no test failures. `python -m pip check`: no broken requirements.
-- Generated OpenAPI/JSON Schema from implemented routes/models. Exact installed
-  foundation dependencies recorded in `requirements.lock`.
+- Metric UTM grid, aligned GeoTIFF reads, terrain/shadow/nodata handling,
+  candidate new-water masks excluding already-dark water, optical corroboration,
+  and explicitly unvalidated disturbance candidates. No geographic accuracy claim.
+- Infrastructure exposure and noded road graphs: metric intersections, bounded
+  mid-road snapping, directed edges, bridge/tunnel grade separation, baseline
+  vs post-removal facility paths and unknown coverage.
+- Official CDSE OAuth/catalogue/Process adapters and historical ohsome v2
+  GeoParquet adapter, tested with mocked responses. Explicit relative orbit is
+  required; missing orbit can be resolved by bounded exact-name public Copernicus
+  product metadata lookup. Public OData attributes were observed successfully.
+- Bounded persistent asynchronous jobs, cancellation, restart failures, safe
+  errors, content-addressed input/preview cache with checked manifests, immutable
+  assessment snapshots, provenance details and offline-package asset hashes.
+- LLM structured fact selection plus separate numerical/citation whitelist.
+  Unsupported/duplicate/extra/incomplete facts fail. Casualties are refused.
+  No actual model call has been performed. Bilingual deterministic previews use
+  identical numerical facts; Nepali wording remains unreviewed.
+- Computed geographic synthetic scene and before/after PNG assets, printable
+  English/Nepali brief previews. All visibly synthetic; no real-world inference.
+- Separate masked evaluation metrics and CLI for boolean prediction/reference
+  arrays. No evaluation/reference module is imported by the live pipeline.
 
-These tests establish foundation behaviour, not geographic mapping accuracy.
-The toy water rule is not a validated water/debris segmentation system. Its
-inputs are arrays already supplied in dB; provider/raster processing is pending.
+## Measured checks
 
-Live providers: not yet connected. Real geographic evaluation: not run.
-AI bilingual generation: not yet implemented. Flight hardware: not supported.
-Claude: handoff prepared; start status must be reported by Claude itself.
+- Python 3.12.14, `python -m pytest`: **91 passed**, one upstream Starlette
+  TestClient/httpx deprecation warning. These are automated backend tests, not
+  the number of completed release gates.
+- `python -m pip check`: no broken requirements.
+- Generated contracts reproduce locally; original assessment/isolation schemas
+  and shared fixture remain unchanged. Report models and additive routes appear
+  in OpenAPI. `git diff --check` passes.
+- Synthetic CLI runs without credentials and produces map layers, three access
+  states, exact preview checksums and brief HTML. Counts/area are toy-data outputs,
+  not observed disaster findings or benchmark scores.
+- Local HTTP checks on port 8000: health/readiness, computed assessment, snapshot
+  hash, both raster hashes, English HTML and explicit unreviewed Nepali metadata.
+- Brief English and Nepali HTML rendered and visually inspected in headless
+  installed Chrome. No clipping observed at 800 px; print-media body heights
+  were 583/603 px before the final grammar change. A4 CSS is provided, but this
+  check does not certify every future dataset's export fits one page.
 
-GitHub foundation CI passed. Starter API was started locally at 127.0.0.1:8000
-and its health endpoint was checked. ohsome v1 metadata confirmed historical
-coverage, but actual legacy road extraction returned HTTP 403. The documented
-v2 path needs a free API key and GeoParquet handling; extraction remains unverified.
+GitHub CI result and ready code commit are recorded after publishing this slice.
+Claude owns its status and measured frontend results in its separate worktree;
+Codex read that checkpoint and left frontend/mission files untouched.
 
-## Next checkpoints
+## Outstanding release gates
 
-- Publish the first API/graph/scene-quality foundation slice and handoff branches.
-- Confirm user's CDSE access without exposing credentials.
-- Verify required reference products and first historical OSM response.
-- Integrate Claude's first fixture-backed map/inspector slice.
+- CDSE client credentials, ohsome v2 key and a model configuration are absent in
+  this runtime. Live source extraction/processing and actual bilingual AI calls
+  have **not** been executed. Readiness returns false.
+- Verify exact contributing Process API tile identity and scene metadata on a
+  credentialed run; the current source register identifies selected catalogue
+  inputs and checksums processed outputs.
+- Execute required official-reference case study and an unfamiliar holdout
+  area/date. Reference availability, mapping accuracy and real runtime/memory
+  are not demonstrated; no IoU/F1 figures can be reported yet.
+- Grounding/reference evaluation on real inputs, fluent Nepali review and final
+  numerical/citation sample review are pending.
+- Connect Claude's image/package/copilot consumer changes, integrate its ready
+  commit, run clean-clone/full release gates and produce submission artifacts.
+- Existing TADS research eligibility/permission remains an organizer question.
+  This backend imports none of its datasets or experiment code. Flight hardware
+  is unsupported; the separate frontend mission is a simulation.
+
+This is a tested backend development deliverable. It is not yet the complete
+real-data Track B submission described by the build plan.

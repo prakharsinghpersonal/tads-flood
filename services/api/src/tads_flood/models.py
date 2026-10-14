@@ -61,6 +61,30 @@ class Summary(StrictModel):
     unknown_network_count: int = Field(ge=0)
 
 
+class ReportClaim(StrictModel):
+    claim_id: str
+    text: str
+    evidence_ids: list[str]
+
+
+class Report(StrictModel):
+    assessment_id: str
+    mode: Literal["synthetic", "live", "cached_live"]
+    generator: str
+    ai_ready: bool
+    language: Literal["en", "ne"]
+    facts: dict[str, int | float | str | None]
+    claims: list[ReportClaim]
+    limitations: list[str]
+
+
+class GroundedReport(Report):
+    model: str | None
+    refused: bool
+    answer: str
+    translation_reviewed: bool
+
+
 class FeatureCollection(StrictModel):
     type: Literal["FeatureCollection"] = "FeatureCollection"
     features: list[dict]
@@ -117,6 +141,8 @@ class Assessment(StrictModel):
         source_ids = [s.source_id for s in self.sources]
         evidence_ids = [e.evidence_id for e in self.evidence]
         settlement_ids = [s.settlement_id for s in self.settlements]
+        if not source_ids or not evidence_ids:
+            raise ValueError("Assessment needs source and evidence provenance")
         for ids in (source_ids, evidence_ids, settlement_ids):
             if len(ids) != len(set(ids)):
                 raise ValueError("Duplicate identifiers in assessment")
@@ -132,9 +158,25 @@ class Assessment(StrictModel):
         for evidence in self.evidence:
             if not set(evidence.source_ids) <= set(source_ids):
                 raise ValueError("Evidence cites missing source")
+            if self.mode != "synthetic" and evidence.kind == "synthetic":
+                raise ValueError("Live assessments cannot contain synthetic evidence")
         for settlement in self.settlements:
             if not set(settlement.evidence_ids) <= set(evidence_ids):
                 raise ValueError("Settlement cites missing evidence")
+        for collection in (self.layers.flood, self.layers.debris, self.layers.roads,
+                           self.layers.buildings, self.layers.settlements):
+            feature_ids = []
+            for feature in collection.features:
+                if feature.get("type") != "Feature" or not feature.get("geometry") or feature.get("id") is None:
+                    raise ValueError("Assessment layers need identifiable GeoJSON features")
+                properties = feature.get("properties", {})
+                if not set(properties.get("evidence_ids", [])) <= set(evidence_ids):
+                    raise ValueError("Layer feature cites missing evidence")
+                if properties.get("source_id") not in source_ids:
+                    raise ValueError("Layer feature cites missing source")
+                feature_ids.append(str(feature["id"]))
+            if len(feature_ids) != len(set(feature_ids)):
+                raise ValueError("Layer feature identifiers must be unique")
         isolated = sum(s.status == "potentially_isolated" for s in self.settlements)
         unknown = sum(s.status == "unknown_network" for s in self.settlements)
         if isolated != self.summary.potentially_isolated_count or unknown != self.summary.unknown_network_count:
@@ -183,4 +225,3 @@ class IsolationRequest(StrictModel):
             if location.node_id is not None and location.node_id not in known:
                 raise ValueError("Unknown graph location node")
         return self
-
