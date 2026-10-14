@@ -5,7 +5,7 @@ satellite data, trace potentially severed road connections, and prepare a
 source-linked situation report. A separate TADS-inspired simulation explores
 offline inspection planning; it is never presented as real drone telemetry.
 
-**Current status: backend development checkpoint.** The backend computes map
+**Current status: tested integration checkpoint.** The backend computes map
 layers, exposure and road connectivity from a geographic synthetic scene; it
 serves persistent jobs, cached radar previews, checksummed offline manifests,
 source details and printable briefs. CDSE, ohsome v2 and grounded LLM adapters

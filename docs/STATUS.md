@@ -1,6 +1,6 @@
 # Codex status
 
-Ready code checkpoint: `7b33593` on `codex/data-engine`; draft PR:
+Ready combined code checkpoint: `4ee3020` on `codex/data-engine`; draft PR:
 https://github.com/prakharsinghpersonal/tads-flood/pull/1.
 Planning and shared foundation are on main; computed backend work is on this
 branch. Assessment schema remains 1.0.0. See the runtime coordination note for
@@ -49,7 +49,19 @@ Claude's additive integration endpoints and the response to its proposal.
   were 583/603 px before the final grammar change. A4 CSS is provided, but this
   check does not certify every future dataset's export fits one page.
 
-GitHub CI result and ready code commit are recorded after publishing this slice.
+Combined code checkpoint `4ee3020` passed GitHub [backend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38503598824)
+and [frontend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38503598850).
+Codex independently ran 39 frontend unit tests and 11 browser tests after the
+integration provenance correction; typecheck/build/bundle secret checks passed.
+The combined launcher and same-origin UI proxy were checked against the running
+API, including typed packages, asset/source timestamps and exact checksums.
+
+The first combined fixture check failed on synthetic source kinds; Codex fixed
+that mismatch in the integration branch and recorded the changed frontend paths.
+Claude's checkout/source branch was left untouched. Source audit still reports
+eight frontend dependency findings; functional CI does not close that separate
+release gate. Dependency updates and imagery/package/copilot consumer wiring
+are assigned in CLAUDE_NEXT.md.
 Claude owns its status and measured frontend results in its separate worktree;
 Codex read that checkpoint and left frontend/mission files untouched.
 
@@ -66,8 +78,9 @@ Codex read that checkpoint and left frontend/mission files untouched.
   are not demonstrated; no IoU/F1 figures can be reported yet.
 - Grounding/reference evaluation on real inputs, fluent Nepali review and final
   numerical/citation sample review are pending.
-- Connect Claude's image/package/copilot consumer changes, integrate its ready
-  commit, run clean-clone/full release gates and produce submission artifacts.
+- Claude's first ready commit 3b348df is integrated. Connect its next image/package/copilot
+  consumer changes, resolve dependency audit findings, run full release gates and
+  produce submission artifacts.
 - Existing TADS research eligibility/permission remains an organizer question.
   This backend imports none of its datasets or experiment code. Flight hardware
   is unsupported; the separate frontend mission is a simulation.
