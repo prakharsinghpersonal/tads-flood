@@ -42,4 +42,3 @@ class Settings:
                 "historical_osm_configured": bool(self.ohsome_api_key),
                 "ai_configured": self.ai_ready, "live_configured": self.live_ready,
                 "note": "Configuration does not establish successful live execution or evaluation."}
-

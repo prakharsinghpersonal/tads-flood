@@ -1,6 +1,6 @@
 # Codex status
 
-Backend checkpoint on `codex/data-engine`; draft PR:
+Ready code checkpoint: `7b33593` on `codex/data-engine`; draft PR:
 https://github.com/prakharsinghpersonal/tads-flood/pull/1.
 Planning and shared foundation are on main; computed backend work is on this
 branch. Assessment schema remains 1.0.0. See the runtime coordination note for

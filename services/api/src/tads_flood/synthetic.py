@@ -56,4 +56,3 @@ def synthetic_bundle():
         raw_osm, features, datetime(2026, 8, 25, tzinfo=timezone.utc),
         dem=encode_tiff(grid, [np.full_like(before, 100), valid]), mode="synthetic")
     return request, bundle
-

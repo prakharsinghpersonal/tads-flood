@@ -20,4 +20,3 @@ def mask_metrics(prediction, reference, valid):
             "precision": divide(tp, tp + fp), "recall": divide(tp, tp + fn),
             "f1": divide(2 * tp, 2 * tp + fp + fn),
             "warning": "Reference coverage must be independent of threshold selection and inference inputs"}
-

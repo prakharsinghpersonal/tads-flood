@@ -29,4 +29,3 @@ def test_unaligned_or_numeric_reference_rejected():
         mask_metrics(np.array([True]), np.array([True, False]), np.array([True]))
     with pytest.raises(ValueError):
         mask_metrics(np.array([1]), np.array([1]), np.array([1]))
-
