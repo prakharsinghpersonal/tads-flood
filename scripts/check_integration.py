@@ -27,6 +27,7 @@ def healthy(port):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--all-browser", action="store_true", help="Include recorded/fixture browser flows")
+    parser.add_argument("--hosted-replay", action="store_true", help="Check the read-only Vercel handler through local HTTP")
     args = parser.parse_args()
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
@@ -38,9 +39,10 @@ def main():
     with TemporaryDirectory(prefix="tads-integration-") as temporary:
         environment["TADS_DATA_ROOT"] = temporary
         with open(Path(temporary) / "api.log", "w+") as log:
-            api = subprocess.Popen([sys.executable, "-m", "uvicorn", "tads_flood.api:app",
+            command = ["node", "scripts/serve_hosted_replay.mjs", str(port)] if args.hosted_replay else [sys.executable, "-m", "uvicorn", "tads_flood.api:app",
                 "--app-dir", "services/api/src", "--host", "127.0.0.1", "--port", str(port),
-                "--no-access-log"], cwd=ROOT, env=environment, stdout=log, stderr=log)
+                "--no-access-log"]
+            api = subprocess.Popen(command, cwd=ROOT, env=environment, stdout=log, stderr=log)
             try:
                 deadline = time.monotonic() + 20
                 while not healthy(port):
@@ -49,7 +51,8 @@ def main():
                         print(log.read(), file=sys.stderr)
                         raise RuntimeError("Integration API failed to start")
                     time.sleep(.1)
-                print("Fresh local API ready; required API flow uses synthetic inputs, no credentials or interception.", flush=True)
+                profile = "hosted synthetic replay" if args.hosted_replay else "fresh Python API with synthetic inputs"
+                print(f"Required browser flow: {profile}, no credentials or interception.", flush=True)
                 environment.update({"CI": "true", "REQUIRE_LOCAL_API": "1",
                                     "VITE_API_BASE_URL": f"http://127.0.0.1:{port}"})
                 command = ["npm", "run", "test:e2e"]

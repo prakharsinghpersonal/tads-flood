@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 import json
+import tarfile
 import re
 import time
 
@@ -116,6 +117,7 @@ class CDSEProvider:
         self._owns_client = client is None
         self._token = None
         self._expires = 0
+        self.radar_process_metadata = {}
 
     def close(self):
         if self._owns_client:
@@ -206,7 +208,7 @@ class CDSEProvider:
                 continue
         return result
 
-    def process(self, grid: MetricGrid, *, data_type, script, acquired_at=None, orbit_direction=None, polarization_code="DV"):
+    def process(self, grid: MetricGrid, *, data_type, script, acquired_at=None, orbit_direction=None, polarization_code="DV", with_metadata=False):
         data = {"type": data_type}
         if acquired_at is not None:
             start, end = acquired_at - timedelta(seconds=1), acquired_at + timedelta(seconds=1)
@@ -220,15 +222,24 @@ class CDSEProvider:
                 "output": {"width": grid.width, "height": grid.height,
                            "responses": [{"identifier": "default", "format": {"type": "image/tiff"}}]},
                 "evalscript": script}
-        return request_bytes(self.client, "POST", PROCESS_URL, cancelled=self.cancelled,
-                             json=body, headers={"Authorization": "Bearer " + self.token(), "Accept": "image/tiff"})
+        if with_metadata:
+            body["output"]["responses"].append({"identifier": "userdata", "format": {"type": "application/json"}})
+        raw = request_bytes(self.client, "POST", PROCESS_URL, cancelled=self.cancelled,
+                            json=body, headers={"Authorization": "Bearer " + self.token(),
+                            "Accept": "application/x-tar" if with_metadata else "image/tiff"})
+        return decode_process_archive(raw) if with_metadata else raw
 
     def radar(self, grid, scene):
         script = '''//VERSION=3
-function setup(){return {input:["VV","dataMask","shadowMask"],output:{bands:3,sampleType:"FLOAT32"}};}
-function evaluatePixel(s){return [s.VV,s.dataMask,s.shadowMask];}'''
-        return self.process(grid, data_type="sentinel-1-grd", script=script,
-                            acquired_at=scene.acquired_at, orbit_direction=scene.orbit_direction, polarization_code=scene.polarization_code)
+function setup(){return {input:["VV","dataMask","shadowMask"],mosaicking:"ORBIT",output:{bands:3,sampleType:"FLOAT32"}};}
+function evaluatePixel(samples){let s=samples[0];return s?[s.VV,s.dataMask,s.shadowMask]:[0,0,0];}
+function updateOutputMetadata(scenes,inputMetadata,outputMetadata){outputMetadata.userData={orbits:scenes.orbits,inputMetadata:inputMetadata};}'''
+        raw, metadata = self.process(grid, data_type="sentinel-1-grd", script=script,
+                            acquired_at=scene.acquired_at, orbit_direction=scene.orbit_direction,
+                            polarization_code=scene.polarization_code, with_metadata=True)
+        validate_process_tiles(metadata, scene)
+        self.radar_process_metadata[scene.product_id] = metadata
+        return raw
 
     def dem(self, grid):
         script = '''//VERSION=3
@@ -250,6 +261,41 @@ function evaluatePixel(s){return [s.B03,s.B08,s.B11,s.SCL,s.dataMask];}'''
         return self.process(grid, data_type="sentinel-2-l2a", script=script, acquired_at=acquired), (str(chosen["id"]), acquired)
 
 
+def decode_process_archive(raw):
+    """Read two bounded named members in memory; never extract provider paths."""
+    try:
+        with tarfile.open(fileobj=BytesIO(raw), mode="r:*") as archive:
+            members = archive.getmembers()
+            if len(members) != 2 or {member.name for member in members} != {"default.tif", "userdata.json"}:
+                raise ValueError("Unexpected process archive members")
+            if any(not member.isfile() or member.size > (64000 if member.name == "userdata.json" else 64_000_000) for member in members):
+                raise ValueError("Invalid process member or budget")
+            image = archive.extractfile("default.tif").read()
+            metadata = safe_json(archive.extractfile("userdata.json").read())
+            return image, metadata
+    except (tarfile.TarError, ValueError, KeyError, OSError, AttributeError) as exc:
+        raise PipelineError("invalid_process_archive", "Processing response needs bounded raster and source metadata outputs.") from exc
+
+
+def validate_process_tiles(metadata, scene):
+    """Require a single orbit whose returned product IDs match the selected input."""
+    try:
+        orbits = metadata["orbits"]
+        if not isinstance(orbits, list) or len(orbits) != 1:
+            raise ValueError("Expected one acquisition orbit")
+        tiles = orbits[0]["tiles"]
+        if not isinstance(tiles, list) or not 1 <= len(tiles) <= 32:
+            raise ValueError("Expected bounded contributing tiles")
+        canonical = lambda name: name.removesuffix(".SAFE").removesuffix("_COG")
+        for tile in tiles:
+            name = tile["sentinel1ProductId"]
+            acquired = datetime.fromisoformat(tile["date"].replace("Z", "+00:00"))
+            if canonical(name) != canonical(scene.product_id) or abs((acquired - scene.acquired_at).total_seconds()) > 1:
+                raise ValueError("Returned product identity/date mismatch")
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise PipelineError("process_source_mismatch", "Processed radar metadata does not match the selected catalogue product/date.") from exc
+
+
 def decode_osm_parquet(raw, *, max_features=10000):
     try:
         parquet_file = parquet.ParquetFile(BytesIO(raw))
@@ -257,7 +303,9 @@ def decode_osm_parquet(raw, *, max_features=10000):
             raise PipelineError("osm_budget_exceeded", "OSM extraction exceeds the feature budget.")
         table = parquet_file.read()
         metadata = json.loads((table.schema.metadata or {}).get(b"geo", b"{}"))
-        column = metadata.get("primary_column", "geometry")
+        # The observed v2 extraction uses geom/edit_timestamp; standard
+        # GeoParquet exports can instead declare geometry/timestamp.
+        column = metadata.get("primary_column") or next((name for name in ("geometry", "geom") if name in table.column_names), "geometry")
         specification = metadata.get("columns", {}).get(column, {})
         if specification.get("encoding", "WKB") != "WKB":
             raise PipelineError("osm_encoding_unsupported", "OSM extraction must use WKB GeoParquet geometry.")
@@ -278,7 +326,7 @@ def decode_osm_parquet(raw, *, max_features=10000):
             tags = row.get("tags", {})
             if isinstance(tags, list):
                 tags = dict(tags)
-            timestamp = row.get("timestamp")
+            timestamp = row.get("edit_timestamp", row.get("timestamp"))
             features.append({"type": "Feature", "id": f"{row.get('osm_type', row.get('type', 'osm'))}/{identifier}",
                              "geometry": mapping(geometry), "properties": {"tags": tags,
                              **({"source_timestamp": timestamp.isoformat() if hasattr(timestamp, "isoformat") else timestamp} if timestamp else {})}})
@@ -312,6 +360,9 @@ class OhsomeProvider:
             timestamp = feature["properties"].get("source_timestamp")
             if timestamp:
                 value = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                if value.date() >= request.event_date:
-                    raise PipelineError("post_event_osm_rejected", "Extraction includes an OSM version from the event or later.")
+                if value.tzinfo is None:
+                    raise PipelineError("osm_timestamp_unknown", "OSM version timestamps must include a timezone.")
+                boundary = datetime.combine(snapshot, datetime.min.time(), tzinfo=timezone.utc)
+                if value > boundary:
+                    raise PipelineError("post_event_osm_rejected", "Extraction includes an OSM version after the requested pre-event snapshot.")
         return raw, features, datetime.combine(snapshot, datetime.min.time(), tzinfo=timezone.utc)

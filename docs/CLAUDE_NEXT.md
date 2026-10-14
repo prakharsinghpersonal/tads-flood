@@ -1,5 +1,10 @@
 # Claude checkpoint 3: boundary checks and submission drafts
 
+**Superseded assignment:** follow `CLAUDE_TEST_UI_PLAN.md` for the current testing
+and UI pass. Codex now owns `docs/submission/**`, deployment files and exports.
+The historical baseline and absent-credential statements below describe the
+earlier checkpoint; current real-source/model results are in `STATUS.md`.
+
 ## Context and starting point
 
 Your code `29ff6d1` and status update `cf01ee1` have been reviewed and integrated

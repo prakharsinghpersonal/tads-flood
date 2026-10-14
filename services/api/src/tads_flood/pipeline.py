@@ -17,7 +17,7 @@ from .models import Assessment, Source, Quality, Summary, Layers, FeatureCollect
 from .providers import CDSEProvider, OhsomeProvider, CatalogScene
 from .topology import build_road_graph
 
-PIPELINE_VERSION = "flood-assessment-v1.3"
+PIPELINE_VERSION = "flood-assessment-v1.4"
 
 
 @dataclass
@@ -33,6 +33,7 @@ class PreparedBundle:
     optical: bytes | None = None
     optical_scene: tuple | None = None
     mode: str = "live"
+    radar_process_metadata: dict | None = None
 
 
 def radar_preview(raster):
@@ -69,12 +70,14 @@ def assemble_assessment(request, bundle, cache: ContentCache, *, progress=lambda
             sha256=digest, usage="input"))
         return source_id
     def radar_metadata(scene):
-        return {"selected_catalogue_scene": {"product_id": scene.product_id,
+        return {"process_source_verification": (bundle.radar_process_metadata or {}).get(scene.product_id),
+            "selected_catalogue_scene": {"product_id": scene.product_id,
             "relative_orbit": scene.relative_orbit, "orbit_direction": scene.orbit_direction,
             "polarization": scene.polarization, "polarization_code": scene.polarization_code},
             "grid": {"epsg": grid.epsg, "bounds": list(grid.bounds), "width": grid.width, "height": grid.height},
             "processing": {"backscatter": "GAMMA0_TERRAIN", "dem": "COPERNICUS_30",
-                           "speckle": "LEE 5x5", "bands": ["VV", "dataMask", "shadowMask"]}}
+                           "speckle": "LEE 5x5", "mosaicking": "ORBIT" if bundle.mode == "live" else "synthetic",
+                           "bands": ["VV", "dataMask", "shadowMask"]}}
     sid_before = source(b.product_id, "sentinel_1", b.acquired_at, bundle.before,
                         "https://sh.dataspace.copernicus.eu/api/v1/process", radar_metadata(b))
     sid_after = source(a.product_id, "sentinel_1", a.acquired_at, bundle.after,
@@ -105,7 +108,7 @@ def assemble_assessment(request, bundle, cache: ContentCache, *, progress=lambda
         "Only mapped vehicle-access roads and facilities are considered; apparent cuts at the AOI boundary can be artifacts."]
     if dem_source:
         warnings.append("DEM acquired_at is the server retrieval time, not an original elevation survey date.")
-    if bundle.mode == "live":
+    if bundle.mode == "live" and not bundle.radar_process_metadata:
         warnings.append("Scene IDs identify selected catalogue inputs; exact contributing Process API tile IDs still require credentialed verification.")
     progress("analyzing", .65, "Intersecting exposure and comparing pre/post-event facility routes")
     graph, roads, buildings, points, unknown_edges, exposed = build_road_graph(
@@ -186,7 +189,7 @@ def run_live(request, settings, cache, *, progress=lambda *args: None, cancelled
                 raise
             optical, optical_scene = None, None
         bundle = PreparedBundle(raw_before, raw_after, before, after, raw_osm, features, snapshot,
-                                dem, optical, optical_scene)
+                                dem, optical, optical_scene, radar_process_metadata=satellite.radar_process_metadata)
         return assemble_assessment(request, bundle, cache, progress=progress, cancelled=cancelled)
     finally:
         satellite.close()

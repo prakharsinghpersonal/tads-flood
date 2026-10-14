@@ -1,5 +1,9 @@
 # Claude: finish UI reliability and presentation
 
+Current authoritative assignment: `CLAUDE_TEST_UI_PLAN.md`. It includes the
+latest measured evidence, recordings and safe instructions for edits already in
+progress. Do not follow the older base/merge instruction below through dirty work.
+
 The human requests completion and a focused UI improvement pass while Codex
 finishes backend/deployment/submission artifacts. This supplements checkpoint 3.
 Keep working only in tads-flood-claude on claude/mission-ui. Fetch and merge

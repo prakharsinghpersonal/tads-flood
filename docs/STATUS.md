@@ -1,102 +1,87 @@
-# Codex status
+# Codex status — 14 October 2026
 
-Integrated Claude code checkpoint: `29ff6d1`, plus its status update `cf01ee1`,
-on `codex/data-engine`; draft PR:
+Implementation branch: `codex/data-engine`; draft PR:
 https://github.com/prakharsinghpersonal/tads-flood/pull/1.
-Planning and shared foundation are on main; computed backend work is on this
-branch. Assessment schema remains 1.0.0. See the runtime coordination note for
-Claude's additive integration endpoints and the response to its proposal.
+Claude checkpoints `29ff6d1`/`cf01ee1` are integrated. Claude's current UI
+reliability/polish edits remain in its own worktree and are not yet integrated.
+Schema is 1.0.0; pipeline is flood-assessment-v1.4; radar method remains
+sar-change-baseline-v1. No threshold tuning used the official reference.
 
-## Implemented and verified locally
+## Executed sources and AI
 
-- Metric UTM grid, aligned GeoTIFF reads, terrain/shadow/nodata handling,
-  candidate new-water masks excluding already-dark water, optical corroboration,
-  and explicitly unvalidated disturbance candidates. No geographic accuracy claim.
-- Infrastructure exposure and noded road graphs: metric intersections, bounded
-  mid-road snapping, directed edges, bridge/tunnel grade separation, baseline
-  vs post-removal facility paths and unknown coverage.
-- Official CDSE OAuth/catalogue/Process adapters and historical ohsome v2
-  GeoParquet adapter, tested with mocked responses. Explicit relative orbit is
-  required; missing orbit can be resolved by bounded exact-name public Copernicus
-  product metadata lookup. Public OData attributes were observed successfully.
-- Bounded persistent asynchronous jobs, cancellation, restart failures, safe
-  errors, content-addressed input/preview cache with checked manifests, immutable
-  assessment snapshots, provenance details and offline-package asset hashes.
-- LLM structured fact selection plus separate numerical/citation whitelist.
-  Unsupported/duplicate/extra/incomplete facts fail. Casualties are refused.
-  No actual model call has been performed. Bilingual deterministic previews use
-  identical numerical facts; Nepali wording remains unreviewed.
-- Computed geographic synthetic scene and before/after PNG assets, printable
-  English/Nepali brief previews. All visibly synthetic; no real-world inference.
-- Separate masked evaluation metrics and CLI for boolean prediction/reference
-  arrays. No evaluation/reference module is imported by the live pipeline.
+- CDSE authentication, real S1 before/after and Copernicus DEM processing passed.
+  Process ORBIT userdata product IDs/dates are verified against catalogue input.
+- Authenticated historical ohsome v2 extraction passed. The small probe returned
+  727 features; all 727 have verified pre-snapshot edit timestamps. No fallback
+  to current OSM or denied legacy endpoints occurs.
+- Credentials are only in ignored server `.env`; neither UI nor git contains them.
+- Installed local Ollama llama3.1:8b completed four development selection/refusal
+  checks. A fifth casualty-injection check refused before a model call. Phi3 mini
+  incorrectly refused a supported question and was not selected. A cold Llama
+  query took 43.56s; frontend request deadlines are a Claude release task.
+- English and Nepali actual-model queries on the live Syapru case selected the
+  same approved isolation/unknown facts. Code supplies numbers/citations.
+  Nepali wording remains an unreviewed DRAFT; this is not linguistic validation.
 
-## Measured checks
+## Actual recorded runs
 
-- Python 3.12.14, `python -m pytest`: **93 passed**, one upstream Starlette
-  TestClient/httpx deprecation warning. These are automated backend tests, not
-  the number of completed release gates.
-- `python -m pip check`: no broken requirements.
-- Generated contracts reproduce locally; original assessment/isolation schemas
-  and shared fixture remain unchanged. Report models and additive routes appear
-  in OpenAPI. `git diff --check` passes.
-- Synthetic CLI runs without credentials and produces map layers, three access
-  states, exact preview checksums and brief HTML. Counts/area are toy-data outputs,
-  not observed disaster findings or benchmark scores.
-- Local HTTP checks on port 8000: health/readiness, computed assessment, snapshot
-  hash, both raster hashes, English HTML and explicit unreviewed Nepali metadata.
-- Brief English and Nepali HTML rendered and visually inspected in headless
-  installed Chrome. No clipping observed at 800 px; print-media body heights
-  were 583/603 px before the final grammar change. A4 CSS is provided, but this
-  check does not certify every future dataset's export fits one page.
+| Scope | Date | Pipeline time before AI | Python peak RSS | Valid coverage |
+|---|---|---|---|---|
+| Syapru Besi | 2026-08-26 | 7.919s | 135.89MiB | 41.8% |
+| Timure | 2026-09-01 | 5.981s | 124.64MiB | 42.1% |
 
-Claude's second checkpoint connects the computed scene, actual PNG comparison,
-exact-byte binary offline packages, grounded copilot requests, readiness states
-and draft-labelled Nepali previews. Its pinned dependency audit reports **zero**
-findings. Codex independently ran the combined workspace check: **61 frontend
-unit tests and 20 browser tests passed**, alongside the 93 backend tests above.
-One opt-in screenshot-generation test was intentionally skipped. The API browser
-flow actually ran against a fresh FastAPI process, with temporary storage and
-no credentials: both images loaded, the package saved, and offline reload
-restored imagery. Other browser flows use recorded/bundled synthetic fixtures.
-Typecheck, production build and bundle secret checks passed.
+Recorded runtime: Python 3.12.14, macOS arm64. These timings are small local
+runs, not a performance benchmark. Syapru output: 3,559m2 candidate flood,
+11 candidate-exposed assets, zero potentially isolated, two unknown-access
+settlements. Timure demonstrates a separate area/date executing without tuning;
+there is no independently scored Timure holdout accuracy claim.
 
-The new API browser integration workflow requires that flow to execute: an
-unreachable API fails instead of skipping. `check_workspace.py --browser` also
-launches the fresh credential-free API. Details and cross-owner changes are in
-[the integration record](coordination/2026-10-14-checkpoint-2-integration.md).
-Claude's pushed ready code passed both existing GitHub workflows before merge;
-exact combined-head CI evidence is recorded with the integration commit/PR.
+## Independent reference comparison
 
-Earlier provenance, UUID package IDs and closed test-database connections are
-retained. Claude's own worktree and status file were not modified by Codex.
-Frontend boundary-hardening and submission draft work are assigned in
-CLAUDE_NEXT.md; they are separate from real-data validation.
+Official EMSR927 AOI01 v1 was retrieved from the official rapid-mapping API.
+The observed-event polygon is Landslide, interpreted from optical imagery.
+The combined flood/disturbance proxy was compared within the official AOI,
+damage-image footprint and jointly valid radar/terrain coverage. Reference
+inputs stayed outside the live pipeline.
 
-## Outstanding release gates
+TP/FP/FN/TN: 9/20/1543/2237, 3,809 valid cells. IoU 0.005725, precision 0.310345,
+recall 0.005799, F1 0.011385. Joint coverage 43.6%; 1,263 positive reference cells
+lack valid radar/terrain comparison. This is a poor landslide-proxy result,
+not a water-only flood segmentation score. Mapping accuracy is not validated.
 
-- CDSE client credentials, ohsome v2 key and a model configuration are absent in
-  this runtime. Live source extraction/processing and actual bilingual AI calls
-  have **not** been executed. Readiness returns false.
-- Verify exact contributing Process API tile identity and scene metadata on a
-  credentialed run; the current source register identifies selected catalogue
-  inputs and checksums processed outputs.
-- Execute required official-reference case study and an unfamiliar holdout
-  area/date. Reference availability, mapping accuracy and real runtime/memory
-  are not demonstrated; no IoU/F1 figures can be reported yet.
-- Grounding/reference evaluation on real inputs, fluent Nepali review and final
-  numerical/citation sample review are pending.
-- Claude's ready checkpoint 29ff6d1 and status cf01ee1 are integrated. Finish
-  the newly assigned frontend boundary cases and submission drafts, then produce
-  the final report/video from measured real runs where available.
-- Existing TADS research eligibility/permission remains an organizer question.
-  This backend imports none of its datasets or experiment code. Flight hardware
-  is unsupported; the separate frontend mission is a simulation.
+Local evidence is ignored under artifacts/case-study-syapru, artifacts/holdout-timure,
+artifacts/local-ai-validation and data/reference/EMSR927. Sanitized real-mode
+UI recordings are in the sibling handoff directory, with hashes and route/status
+mappings. They must be labelled recordings rather than new live execution.
 
-This is a tested backend development deliverable. It is not yet the complete
-real-data Track B submission described by the build plan.
+## Measured engineering checks
 
-A later CI run exposed open IndexedDB test connections and second-resolution
-package-ID collisions. Both were corrected; same-timestamp saves now preserve
-separate packages, and the database cleanup must close connections before deletion.
-The corrected code checkpoint 047d2fe passed both CI workflows.
+Latest backend check: 110 passed, one upstream Starlette/httpx warning.
+Latest combined UI checkpoint: 61 frontend tests and 20 browser tests passed,
+with one opt-in storyboard test skipped. Actual API browser integration runs
+against fresh credential-free FastAPI and cannot skip. Other browser checks use
+recorded/bundled synthetic inputs. Contract reproduction, dependency check,
+typecheck/build and bundle secret checks passed. Hosted synthetic replay hashes,
+errors and an actual HTTP browser/offline flow passed locally. New Claude edits
+must receive their own final checks and independent integration review.
+
+Six-page technical report draft and English/Nepali one-page briefs were rendered,
+page-count checked and visually inspected. Nepali remains draft. Portable export
+scripts and source Markdown are included; output PDFs are ignored release files.
+
+## Outstanding gates
+
+1. Finish/integrate Claude's path/body-timeout/cancellation/scope/storage tests and
+   focused UI pass; rerun combined suites and exact-head CI.
+2. Fluent Nepali review with explicit signoff, or preserve DRAFT disclosure.
+3. Final three-minute recording and public/unlisted video link.
+4. Human registration/student eligibility/team names and research disclosure;
+   the human owns organizer clarification and final Devpost submission.
+5. Optional Vercel account authorization and deployed-domain checks. Prepared
+   Vercel profile is a synthetic read-only replay; full live API is separate.
+   Local Docker daemon is unavailable, so the container is not built/verified.
+
+No more paid provider/model key is needed for the local demonstration. A cloud
+model/API host is needed only if the public site must run fresh live questions.
+A baseline that misses most reference damage cannot be described as a strong
+mapping model or promised a winning score. Mission remains simulation only.

@@ -5,13 +5,13 @@ satellite data, trace potentially severed road connections, and prepare a
 source-linked situation report. A separate TADS-inspired simulation explores
 offline inspection planning; it is never presented as real drone telemetry.
 
-**Current status: tested integration checkpoint.** The backend computes map
-layers, exposure and road connectivity from a geographic synthetic scene; it
-serves persistent jobs, cached radar previews, checksummed offline manifests,
-source details and printable briefs. CDSE, ohsome v2 and grounded LLM adapters
-are implemented with mocked provider tests. Credentialed execution, geographic
-accuracy, official-reference evaluation and fluent Nepali review remain release
-gates. Synthetic results do not establish real-world performance.
+**Current status: working prototype with measured mapping limitations.** Actual
+authenticated Sentinel-1/DEM and historical ohsome runs completed for Syapru Besi
+and a separate Timure area/date. Local llama3.1:8b answered English/Nepali queries
+by selecting approved computed facts. The EMSR927 AOI01 landslide comparison is
+poor (IoU 0.0057; F1 0.0114 over jointly valid cells). This is an unvalidated
+flood/disturbance baseline, not operational disaster mapping. Frontend hardening,
+fluent Nepali review, the final demo and human submission remain open.
 
 ## Start here
 
@@ -23,7 +23,9 @@ gates. Synthetic results do not establish real-world performance.
 - [Sources, data policy, and unresolved questions](docs/DATA_POLICY.md)
 - [Actual development status](docs/STATUS.md)
 - [Implemented backend thresholds and limitations](docs/BACKEND_METHOD.md)
-- [Claude's next integration assignment](docs/CLAUDE_NEXT.md)
+- [Claude's current testing and UI assignment](docs/CLAUDE_TEST_UI_PLAN.md)
+- [Deployment profiles and Vercel setup](docs/DEPLOYMENT.md)
+- [Submission artifacts and human steps](docs/submission/DELIVERY_CHECKLIST.md)
 
 ## Development
 
@@ -77,7 +79,9 @@ python scripts/run_synthetic_pipeline.py
 
 Copy `.env.example` to `.env` for server-side configuration. The live worker
 requires CDSE Sentinel Hub OAuth credentials and an ohsome v2 API key; the AI
-selector additionally requires `LLM_API_KEY`, `LLM_MODEL`, `LLM_BASE_URL` (an
+selector can use the installed local Ollama model: set `LLM_PROVIDER=ollama`,
+`LLM_MODEL=llama3.1:8b`, `LLM_BASE_URL=http://127.0.0.1:11434`, with no API key.
+Cloud selection uses `LLM_PROVIDER=openai`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_BASE_URL` (an
 HTTPS base URL implementing strict JSON-schema chat completions, ending `/v1`
 where applicable). Keys never belong in `VITE_*` variables. Readiness at
 `/api/v1/readiness` reports configuration only, not validated execution. Runtime
@@ -86,7 +90,7 @@ data/cache is ignored by git. Deployment currently assumes one API process.
 See [the backend runtime handoff](docs/coordination/2026-10-13-backend-runtime.md)
 for image coordinates, hashes, copilot and integration examples. The bilingual
 `/brief` endpoint is a deterministic preview; the `/copilot` endpoint calls the
-configured model to select approved facts. An absent key is an explicit error.
+configured model to select approved facts. Missing model configuration is an explicit error.
 The frontend lockfile audit currently reports zero vulnerabilities; this does
 not establish real-data accuracy or successful model execution.
 

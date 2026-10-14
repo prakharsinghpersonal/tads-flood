@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 from io import BytesIO
 import json
+import tarfile
 
 import httpx
 import pyarrow as pa
@@ -9,7 +10,7 @@ import pytest
 from shapely.geometry import Point
 
 from tads_flood.errors import PipelineError
-from tads_flood.providers import CDSEProvider, OhsomeProvider, decode_osm_parquet, select_radar_pair, request_bytes
+from tads_flood.providers import CDSEProvider, OhsomeProvider, CatalogScene, decode_osm_parquet, select_radar_pair, request_bytes, decode_process_archive, validate_process_tiles
 from tads_flood.settings import Settings
 from tads_flood.models import AssessmentRequest
 
@@ -87,6 +88,22 @@ def test_geoparquet_decodes_stable_ids_and_coordinates():
     assert values[0]["properties"]["tags"]["place"] == "village"
 
 
+def test_observed_v2_geom_and_edit_timestamp_are_retained_and_guarded():
+    table = pa.table({"osm_id": [123], "osm_type": ["node"], "geom": [Point(85.26, 27.86).wkb],
+                      "tags": [{"place": "village"}], "edit_timestamp": [datetime(2026, 8, 25, 12, tzinfo=timezone.utc)],
+                      "valid_to_timestamp": [datetime(2222, 1, 1, tzinfo=timezone.utc)]})
+    buffer = BytesIO()
+    parquet.write_table(table, buffer)
+    raw = buffer.getvalue()
+    features = decode_osm_parquet(raw)
+    assert features[0]["properties"]["source_timestamp"].startswith("2026-08-25T12:")
+    provider = OhsomeProvider(Settings(ohsome_api_key="test-key"),
+        client=httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, content=raw))))
+    request = AssessmentRequest(bbox=(85.25, 27.85, 85.27, 27.87), event_date="2026-08-26", mode="live")
+    with pytest.raises(PipelineError, match="snapshot"):
+        provider.extract(request)
+
+
 def test_historical_extractor_uses_key_snapshot_and_rejects_post_event_versions():
     captured = []
     def handler(request):
@@ -94,7 +111,7 @@ def test_historical_extractor_uses_key_snapshot_and_rejects_post_event_versions(
         return httpx.Response(200, content=parquet_bytes(datetime(2026, 8, 27, tzinfo=timezone.utc)))
     provider = OhsomeProvider(Settings(ohsome_api_key="test-key"), client=httpx.Client(transport=httpx.MockTransport(handler)))
     request = AssessmentRequest(bbox=(85.25, 27.85, 85.27, 27.87), event_date="2026-08-26", mode="live")
-    with pytest.raises(PipelineError, match="event or later"):
+    with pytest.raises(PipelineError, match="pre-event snapshot"):
         provider.extract(request)
     assert captured[0].headers["authorization"] == "test-key"
     assert json.loads(captured[0].content)["time"] == "2026-08-25"
@@ -103,6 +120,44 @@ def test_historical_extractor_uses_key_snapshot_and_rejects_post_event_versions(
 def test_credentials_are_not_exposed_in_settings_repr():
     settings = Settings(cdse_client_secret="private-secret", ohsome_api_key="private-key")
     assert "private-secret" not in repr(settings) and "private-key" not in repr(settings)
+
+
+def process_archive(entries):
+    stream = BytesIO()
+    with tarfile.open(fileobj=stream, mode="w") as archive:
+        for name, payload in entries:
+            member = tarfile.TarInfo(name)
+            member.size = len(payload)
+            archive.addfile(member, BytesIO(payload))
+    return stream.getvalue()
+
+
+def test_process_archive_is_bounded_and_never_extracts_paths():
+    image, metadata = decode_process_archive(process_archive([("default.tif", b"raster"), ("userdata.json", b'{"orbits":[]}')]))
+    assert image == b"raster" and metadata == {"orbits": []}
+    for entries in [[("../default.tif", b"x"), ("userdata.json", b'{}')],
+                    [("default.tif", b"x"), ("userdata.json", b' ' * 64001)],
+                    [("default.tif", b"x")], [("default.tif", b"x"), ("userdata.json", b'{}'), ("extra", b'x')]]:
+        with pytest.raises(PipelineError):
+            decode_process_archive(process_archive(entries))
+
+
+def verified_scene():
+    return CatalogScene("S1D_TEST_COG.SAFE", datetime(2026, 8, 20, tzinfo=timezone.utc), 85, "VV", "ASCENDING", "DV")
+
+
+def test_process_product_identity_and_acquisition_match_before_acceptance():
+    validate_process_tiles({"orbits": [{"tiles": [{"sentinel1ProductId": "S1D_TEST", "date": "2026-08-20T00:00:00Z"}]}]}, verified_scene())
+
+
+@pytest.mark.parametrize("metadata", [
+    {}, {"orbits": []}, {"orbits": [{"tiles": []}]},
+    {"orbits": [{"tiles": [{"sentinel1ProductId": "different", "date": "2026-08-20T00:00:00Z"}]}]},
+    {"orbits": [{"tiles": [{"sentinel1ProductId": "S1D_TEST", "date": "2026-08-21T00:00:00Z"}]}]},
+])
+def test_unknown_or_mismatched_process_sources_rejected(metadata):
+    with pytest.raises(PipelineError):
+        validate_process_tiles(metadata, verified_scene())
 
 
 def test_transient_retries_are_bounded(monkeypatch):

@@ -142,8 +142,9 @@ def detect_change(before: RadarRaster, after: RadarRaster, grid: MetricGrid,
     with np.errstate(divide="ignore", invalid="ignore"):
         b = 10 * np.log10(before.backscatter)
         a = 10 * np.log10(after.backscatter)
-    flood = valid & (b > water_db) & (a <= water_db) & (b - a >= drop_db)
-    disturbance = valid & (a - b >= brightening_db)
+    with np.errstate(invalid="ignore"):
+        flood = valid & (b > water_db) & (a <= water_db) & (b - a >= drop_db)
+        disturbance = valid & (a - b >= brightening_db)
     if optical is not None:
         # Optical bands are B03, B08, B11, SCL, dataMask; only clear classes
         # corroborate candidates. Cloud-covered cells remain SAR-only.

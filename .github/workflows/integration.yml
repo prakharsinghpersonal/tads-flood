@@ -25,6 +25,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web
       - run: python scripts/check_integration.py
+      - run: node scripts/check_hosted_replay.mjs
+      - run: python scripts/check_integration.py --hosted-replay
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

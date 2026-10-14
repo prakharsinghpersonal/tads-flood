@@ -1,8 +1,9 @@
 # Implemented backend method and reproducibility limits
 
 This describes the code checkpoint, not a validated disaster-response method.
-Assessment schema: 1.0.0; pipeline fingerprint: flood-assessment-v1.3; radar
-method: sar-change-baseline-v1. Independent geographic evaluation is pending.
+Assessment schema: 1.0.0; pipeline fingerprint: flood-assessment-v1.4; radar
+method: sar-change-baseline-v1. The measured EMSR927 comparison is poor; see
+STATUS.md. This baseline is not validated debris segmentation.
 
 ## Inputs and source selection
 
@@ -17,16 +18,19 @@ features. Incompatible/missing scenes fail explicitly.
 
 CDSE Process requests use Gamma0 terrain backscatter, orthorectification,
 Copernicus 30 m DEM and Lee 5×5 speckle filtering. The selected scene's acquisition
-window is ±1 second. VV, dataMask and shadowMask are retained. Exact contributing
-Process API tile IDs still need verification on a credentialed run; selected
-catalogue IDs and output byte hashes are not sufficient to close that gate.
+window is ±1 second. VV, dataMask and shadowMask are retained. Process responses
+include ORBIT userdata; product IDs and acquisition dates must match the selected
+catalogue inputs. Bounded tar members are read without filesystem extraction.
+Actual credentialed probes and both recorded runs passed these checks.
 
 Historical ohsome v2 extraction requests roads, building footprints, hospitals,
 clinics and settlements at midnight on the day before the event; it never falls
 back to current OSM. GeoParquet WKB/CRS and stable identifiers are checked, with
-at most 10,000 rows. A row version at/after the event is rejected. Closed-world
-OSM extraction, timestamp semantics and real field compatibility await a keyed
-run. Raw EMS/UNOSAT damage layers are forbidden inference inputs.
+at most 10,000 rows. A row version later than the requested pre-event snapshot
+is rejected. Actual v2 extraction returned geom/edit_timestamp fields; all 727
+smoke-probe rows carry verified pre-snapshot timestamps. Alternate standard
+GeoParquet geometry/timestamp fields remain supported. Raw EMS/UNOSAT damage
+layers are forbidden inference inputs.
 
 Optional Sentinel-2 L2A is selected within ten post-event days, scene cloud cover
 at most 30%. It corroborates radar; it does not create coverage where radar is
@@ -98,7 +102,10 @@ restart do not silently replay jobs. This implementation assumes one API process
 The configured LLM receives an approved fact menu (≤80 IDs) and question as
 untrusted data. Strict output selects ≤20 fact IDs or refuses. Duplicate, unknown,
 outside-menu, extra-field and incomplete output fails. Code renders every number,
-wording template and evidence citation. The actual model call is not yet tested.
+wording template and evidence citation. Actual local llama3.1:8b calls passed
+four small development checks and English/Nepali queries on the recorded real
+case. This is a small sample, not a broad relevance benchmark. Native Ollama is
+restricted to literal loopback HTTP; cloud endpoints require HTTPS.
 English/Nepali previews use the same numeric facts, but Nepali templates require
 fluent review. The model selector can still choose irrelevant supported facts;
 relevance/refusal quality requires real-model evaluation. HTML briefs select at

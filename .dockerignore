@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+.venv
+apps
+data
+artifacts
+output
+tmp
+tests
+__pycache__
+*.pyc

@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse, Response, HTMLResponse
 from pydantic import Field
 
 from .cache import ContentCache
+from .attribution import attributions
 from .connectivity import analyze_isolation
 from .copilot import generate_answer, deterministic_bilingual_report
 from .errors import PipelineError
@@ -262,7 +263,7 @@ def create_app(*, settings=None, store=None, cache=None, runner=run_live):
                 "assessment_uri": f"/api/v1/assessments/{assessment_id}/snapshot",
                 "assessment_sha256": hashlib.sha256(value.model_dump_json().encode()).hexdigest(),
                 "assets": raster_assets,
-                "attribution": ["Contains modified Copernicus Sentinel data 2026.", "© OpenStreetMap contributors."] if value.mode != "synthetic" else ["Synthetic training data; no real-world flood finding."],
+                "attribution": attributions(value),
                 "limitations": value.limitations}
 
     @app.get("/api/v1/assessments/{assessment_id}/snapshot")
