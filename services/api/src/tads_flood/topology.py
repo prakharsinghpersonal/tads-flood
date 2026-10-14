@@ -73,6 +73,10 @@ def build_road_graph(features, epsg, exposure_geometry, valid_geometry, *, sourc
     roads, locations, buildings = [], [], []
     for asset_id, geometry, properties in records:
         metric = to_metric(geometry, epsg)
+        # A hospital can also be a building: routing and exposure are separate
+        # roles, so classifying it as a facility must not discard its footprint.
+        if "building" in properties and metric.geom_type in ("Polygon", "MultiPolygon"):
+            buildings.append((asset_id, metric, geometry, properties))
         if "highway" in properties:
             if properties["highway"] in EXCLUDED_HIGHWAYS or properties.get("access") in ("no", "private"):
                 continue
@@ -87,8 +91,6 @@ def build_road_graph(features, epsg, exposure_geometry, valid_geometry, *, sourc
             locations.append((asset_id, metric.centroid, "facility", geometry, properties))
         elif properties.get("place") in ("village", "hamlet", "town", "city"):
             locations.append((asset_id, metric.centroid, "settlement", geometry, properties))
-        elif "building" in properties:
-            buildings.append((asset_id, metric, geometry, properties))
     if len(roads) > max_roads or len(locations) > 2000:
         raise PipelineError("graph_budget_exceeded", "Infrastructure graph exceeds the prototype budget.")
     tree = STRtree([road.geometry for road in roads]) if roads else None

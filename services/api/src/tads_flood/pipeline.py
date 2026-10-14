@@ -17,7 +17,7 @@ from .models import Assessment, Source, Quality, Summary, Layers, FeatureCollect
 from .providers import CDSEProvider, OhsomeProvider, CatalogScene
 from .topology import build_road_graph
 
-PIPELINE_VERSION = "flood-assessment-v1.1"
+PIPELINE_VERSION = "flood-assessment-v1.2"
 
 
 @dataclass

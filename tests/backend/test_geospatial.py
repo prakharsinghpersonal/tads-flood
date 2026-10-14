@@ -207,3 +207,15 @@ def test_grade_of_selected_snap_line_is_preserved(monkeypatch):
     value = analyze_isolation(graph)[0]
     assert value.status == "connected"
     assert all(edge.startswith("bridge:") for edge in value.baseline_route_edge_ids)
+
+
+def test_hospital_footprint_is_kept_for_exposure_and_facility_routing():
+    items = features([("r", LineString([(400000, 3000000), (400200, 3000000)]), {"highway": "primary"})],
+        [("v", Point(400000, 3000000), {"place": "village"}),
+         ("hospital", box(400190, 2999990, 400210, 3000010), {"amenity": "hospital", "building": "hospital"})])
+    graph, roads, buildings, points, unknown, exposed = graph_from(items, box(400195, 2999990, 400210, 3000010))
+    assert len(graph.facilities) == 1 and graph.facilities[0].location_id == "hospital"
+    assert buildings[0]["id"] == "hospital" and buildings[0]["properties"]["status"] == "exposed"
+    assert buildings[0]["properties"]["exposed_area_m2"] == pytest.approx(300)
+    assert len([p for p in points if p["id"] == "hospital"]) == 1
+    assert exposed == 2  # One road source asset plus the hospital, counted once.
