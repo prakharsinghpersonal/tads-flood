@@ -228,14 +228,37 @@ export const ReadinessSchema = z.object({
 export type Readiness = z.infer<typeof ReadinessSchema>;
 
 // Only same-origin API paths may be fetched for package bytes (no arbitrary URLs).
-export function isSameOriginApiPath(uri: string) {
-  const [path, query = ''] = uri.split('?', 2);
-  return (
-    /^\/api\/v1\/[A-Za-z0-9._~%\/-]+$/.test(path) &&
-    !path.split('/').some((seg) => seg === '..' || seg === '.') &&
-    !path.includes('//') &&
-    /^[A-Za-z0-9=&_.-]*$/.test(query)
-  );
+// The check runs on what the browser will actually request: the URL parser must
+// leave the path unchanged (so %2e%2e and similar cannot be normalised away),
+// every decoded segment is checked for dot segments, backslashes and controls,
+// and the query is one plain key=value list. Percent-encoded IDs (including an
+// encoded "/" inside a source ID, as the contract allows) remain valid.
+const BASE = 'http://same-origin.invalid';
+export function isSameOriginApiPath(uri: string): boolean {
+  if (typeof uri !== 'string' || !uri.startsWith('/api/v1/') || uri.startsWith('//')) return false;
+  if (/[\s\\#]/.test(uri) || (uri.match(/\?/g) ?? []).length > 1) return false;
+  let url: URL;
+  try {
+    url = new URL(uri, BASE);
+  } catch {
+    return false;
+  }
+  if (url.origin !== BASE || url.pathname + url.search !== uri) return false;
+  if (!url.pathname.startsWith('/api/v1/')) return false;
+  for (const raw of url.pathname.split('/').slice(1)) {
+    if (raw === '') return false;
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(raw);
+    } catch {
+      return false; // malformed percent escape
+    }
+    if (/[\u0000-\u001f\u007f\\]/.test(decoded)) return false;
+    if (decoded.split('/').some((part) => part === '.' || part === '..')) return false;
+  }
+  const query = url.search.slice(1);
+  if (query && !/^[A-Za-z0-9_.-]+=[A-Za-z0-9_.-]*(&[A-Za-z0-9_.-]+=[A-Za-z0-9_.-]*)*$/.test(query)) return false;
+  return true;
 }
 
 export const ErrorEnvelopeSchema = z.object({

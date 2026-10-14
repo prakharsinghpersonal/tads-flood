@@ -4,6 +4,8 @@ import {
   STATUS_EXPLAINER,
   STATUS_LABEL,
   STATUS_ORDER,
+  edgeLabel,
+  featureLabel,
   formatArea,
   indexFeatures,
   prop,
@@ -24,7 +26,6 @@ interface Props {
   scenes: SceneLoad;
   radarView: RadarView;
   radarOpacity: number;
-  onRadarView: (v: RadarView) => void;
   onRadarOpacity: (v: number) => void;
 }
 
@@ -37,10 +38,15 @@ const TOGGLES: Array<[ToggleLayer, string, string]> = [
   ['uncertainty', 'Uncertainty / no data', 'swatch-unknown'],
 ];
 
-export default function AssessmentPanel({ loaded, selection, visible, onToggle, onSelect, scenes, radarView, radarOpacity, onRadarView, onRadarOpacity }: Props) {
+export default function AssessmentPanel({ loaded, selection, visible, onToggle, onSelect, scenes, radarView, radarOpacity, onRadarOpacity }: Props) {
   const a = loaded.assessment;
   const features = useMemo(() => indexFeatures(a), [a]);
   const facilities = [...features.values()].filter((f) => f.layer === 'settlements' && prop(f.feature, 'kind') === 'facility');
+  const noFacility =
+    a.settlements.length > 0 &&
+    facilities.length === 0 &&
+    ![...features.values()].some((f) => typeof prop(f.feature, 'amenity') === 'string') &&
+    a.settlements.every((x) => x.baseline_facility_id === null);
   const grouped = STATUS_ORDER.map((status) => ({
     status,
     items: a.settlements.filter((s) => s.status === status),
@@ -55,8 +61,8 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
     <div className="assessment-panel">
       <section aria-labelledby="summary-title" className="panel-section">
         <h2 id="summary-title">Summary</h2>
-        <p className="small muted">
-          Backend figures from <code>{a.assessment_id}</code> · event {a.event_date} · method {a.quality.method_version}
+        <p className="small muted" title={`${a.assessment_id} · method ${a.quality.method_version}`}>
+          Event {a.event_date} · figures computed by the backend
         </p>
         <dl className="facts" data-testid="summary-facts">
           <div>
@@ -96,34 +102,14 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
         )}
       </section>
 
-      <SceneCompare
-        assessment={a}
-        load={scenes}
-        view={radarView}
-        opacity={radarOpacity}
-        onView={onRadarView}
-        onOpacity={onRadarOpacity}
-        onSelect={onSelect}
-      />
-
-      <section aria-labelledby="layers-title" className="panel-section">
-        <h2 id="layers-title">Layers</h2>
-        <ul className="toggles">
-          {TOGGLES.map(([key, label, swatch]) => (
-            <li key={key}>
-              <label>
-                <input type="checkbox" checked={visible[key]} onChange={() => onToggle(key)} />
-                <span className={`swatch ${swatch}`} aria-hidden="true" />
-                {label}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <section aria-labelledby="settlements-title" className="panel-section">
         <h2 id="settlements-title">Settlement access</h2>
-        {grouped.length === 0 && <p className="muted">No settlement connectivity results in this assessment.</p>}
+        {grouped.length === 0 && <p className="notice small">No settlement access results in this assessment. That is missing data, not an all-clear.</p>}
+        {noFacility && (
+          <p className="notice small" data-testid="no-facility">
+            No hospital or clinic is mapped in this area, so facility access cannot be assessed here.
+          </p>
+        )}
         {grouped.map((g) => (
           <div key={g.status} className="status-group">
             <h3 className={`status-heading status-${g.status}`}>
@@ -141,7 +127,12 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
                   >
                     <span className={`dot status-${s.status}`} aria-hidden="true" />
                     {settlementName(a, s)}
-                    {s.candidate_cut_edge_ids.length > 0 && <span className="small muted"> · cut: {s.candidate_cut_edge_ids.join(', ')}</span>}
+                    {s.candidate_cut_edge_ids.length > 0 && (
+                      <span className="small muted" title={s.candidate_cut_edge_ids.join(', ')}>
+                        {' '}
+                        · {s.candidate_cut_edge_ids.length} candidate cut{s.candidate_cut_edge_ids.length > 1 ? 's' : ''}: {s.candidate_cut_edge_ids.map((id) => edgeLabel(features.get(id)?.feature, id).split(' · ')[0]).join(', ')}
+                      </span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -149,6 +140,15 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
           </div>
         ))}
       </section>
+
+      <SceneCompare
+        assessment={a}
+        load={scenes}
+        view={radarView}
+        opacity={radarOpacity}
+        onOpacity={onRadarOpacity}
+        onSelect={onSelect}
+      />
 
       {facilities.length > 0 && (
         <section aria-labelledby="facilities-title" className="panel-section">
@@ -168,6 +168,7 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
 
       <section aria-labelledby="assets-title" className="panel-section">
         <h2 id="assets-title">Exposed assets and road edges</h2>
+        <p className="small muted">Candidate exposure only: not confirmed damage or closure.</p>
         {exposed.length === 0 ? (
           <p className="muted">No exposed features with geometry in this assessment.</p>
         ) : (
@@ -175,12 +176,30 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
             {exposed.map((f) => (
               <li key={f.id}>
                 <button type="button" aria-pressed={selectedId === f.id} onClick={() => onSelect({ kind: 'feature', layer: f.layer, id: f.id })}>
-                  {f.id} <span className="small muted">({f.layer}, {String(prop(f.feature, 'status')).replace(/_/g, ' ')})</span>
+                  <span>{f.layer === 'roads' ? edgeLabel(f.feature, f.id) : featureLabel(f.feature, f.id)}</span>
+                  <span className="small muted">
+                    {String(prop(f.feature, 'status')).replace(/_/g, ' ')} · <code>{f.id}</code>
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
         )}
+      </section>
+
+      <section aria-labelledby="layers-title" className="panel-section">
+        <h2 id="layers-title">Layers</h2>
+        <ul className="toggles">
+          {TOGGLES.map(([key, label, swatch]) => (
+            <li key={key}>
+              <label>
+                <input type="checkbox" checked={visible[key]} onChange={() => onToggle(key)} />
+                <span className={`swatch ${swatch}`} aria-hidden="true" />
+                {label}
+              </label>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section aria-labelledby="limits-title" className="panel-section">

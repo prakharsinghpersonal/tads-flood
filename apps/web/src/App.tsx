@@ -5,6 +5,7 @@ import EvidenceInspector from './components/EvidenceInspector';
 import MapBoundary from './components/MapBoundary';
 import PreparePanel from './components/PreparePanel';
 import ReportPanel, { type ReportSource } from './components/ReportPanel';
+import MapRadarControl from './components/MapRadarControl';
 import type { RadarView } from './components/SceneCompare';
 import OfflinePanel from './offline/OfflinePanel';
 import { CHANNEL_LABEL, MODE_LABEL, ageLabel, type LoadedAssessment, type Selection } from './domain/assessment';
@@ -140,12 +141,13 @@ export default function App({ client: injected }: AppProps) {
   const reportSource: ReportSource | null = useMemo(() => {
     if (!loaded) return null;
     const id = loaded.assessment.assessment_id;
+    const mode = loaded.assessment.mode;
     if (loaded.channel === 'api') {
       return {
-        brief: (lang, signal) => client.getBrief(id, lang, signal),
-        reviewed: (lang, signal) => client.getReport(id, lang, signal),
+        brief: (lang, signal) => client.getBrief(id, lang, signal, mode),
+        reviewed: (lang, signal) => client.getReport(id, lang, signal, mode),
         briefHtml: async (lang, signal) => new Blob([(await client.briefHtml(id, lang, signal)).bytes], { type: 'text/html' }),
-        copilot: online ? (q, lang, signal) => client.askCopilot(id, q, lang, signal) : null,
+        copilot: online ? (q, lang, signal) => client.askCopilot(id, q, lang, signal, mode) : null,
         copilotUnavailable: online ? null : 'The browser is offline. The copilot needs the API; cached briefs remain available.',
       };
     }
@@ -234,6 +236,7 @@ export default function App({ client: injected }: AppProps) {
               )}
             </div>
           )}
+          {a && <MapRadarControl load={scenes} view={radarView} onView={setRadarView} />}
           {mapError && (
             <div className="map-error" role="alert">
               {mapError}
@@ -302,7 +305,6 @@ export default function App({ client: injected }: AppProps) {
                       scenes={scenes}
                       radarView={radarView}
                       radarOpacity={radarOpacity}
-                      onRadarView={setRadarView}
                       onRadarOpacity={setRadarOpacity}
                     />
                   </>

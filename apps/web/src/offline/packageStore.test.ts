@@ -4,7 +4,7 @@ import { parseAssessment } from '../api/contract';
 import { loadBundledFixture } from '../components/PreparePanel';
 import { sha256Bytes } from '../domain/scenes';
 import { createSim, step } from '../mission/sim';
-import { PNG, SNAPSHOT, SNAPSHOT_BYTES, geographicApi } from '../test/fakeApi';
+import { BRIEF_EN, PNG, SNAPSHOT, SNAPSHOT_BYTES, geographicApi } from '../test/fakeApi';
 import {
   LEGACY_MANIFEST_VERSION,
   MANIFEST_VERSION,
@@ -125,6 +125,10 @@ describe('offline package store (browser-package-2)', () => {
     const d = await db();
     const row = (await d.get('assets', `${m.package_id}/before_radar`))!;
     await d.put('assets', { ...row, bytes: new Uint8Array([9, 9, 9]).buffer });
+    await expect(openPackage(m.package_id)).rejects.toThrow(/before_radar has 3 bytes/);
+    // Same length, different content: caught by the hash.
+    const same = new Uint8Array(row.bytes!.byteLength).fill(7);
+    await d.put('assets', { ...row, bytes: same.buffer });
     await expect(openPackage(m.package_id)).rejects.toThrow(/before_radar failed its SHA-256/);
   });
 
@@ -188,8 +192,131 @@ describe('offline package store (browser-package-2)', () => {
     expect(opened.manifest.assets.find((x) => x.asset_id === 'assessment')!.sha256).toBe(await sha256Bytes(new TextEncoder().encode(text)));
 
     await legacy('pkg-bad', text.replace('"potentially_isolated_count":1', '"potentially_isolated_count":5'));
-    await expect(openPackage('pkg-bad')).rejects.toThrow(/not migrated or opened/);
+    await expect(openPackage('pkg-bad')).rejects.toThrow(/left untouched/);
     expect((await (await db()).get('manifests', 'pkg-bad'))!.manifest_version).toBe(LEGACY_MANIFEST_VERSION);
+  });
+
+  // ---- T07: invalid or wrong-scope content aborts the whole save ----------
+  const save = async (extra: Parameters<typeof geographicApi>[0]) => {
+    const { fetchImpl } = await geographicApi(extra);
+    return createPackage(apiLoaded, createClient({ fetchImpl }));
+  };
+  const nothingSaved = async () => {
+    expect(await listPackages()).toEqual([]);
+    expect(await lastPackageId()).toBeNull();
+  };
+
+  it('T07: a brief that is not JSON aborts the save', async () => {
+    await expect(save((url) => (url.includes('brief?language=en&format=json') ? { status: 200, bytes: new TextEncoder().encode('{oops') } : undefined))).rejects.toThrow(
+      /brief-en is not valid JSON. Nothing was saved/,
+    );
+    await nothingSaved();
+  });
+
+  it.each([
+    ['another assessment', { assessment_id: 'other-area' }, /belongs to other-area/],
+    ['another language', { language: 'ne' }, /is in ne, not the requested en/],
+    ['another mode', { mode: 'live' }, /is live but the assessment is synthetic/],
+  ])('T07: a 200 brief for %s aborts the save', async (_l, over, msg) => {
+    await expect(save((url) => (url.includes('brief?language=en&format=json') ? { status: 200, body: { ...BRIEF_EN, ...over } } : undefined))).rejects.toThrow(msg);
+    await nothingSaved();
+  });
+
+  it('T07: a report that does not match its contract aborts the save', async () => {
+    await expect(save((url) => (url.endsWith('report?language=en') ? { status: 200, body: { answer: 'x' } } : undefined))).rejects.toThrow(/report-en does not match its contract/);
+    await nothingSaved();
+  });
+
+  it('T07: duplicate image roles or a manifest/snapshot mode mismatch abort the save', async () => {
+    const { pkg } = await geographicApi();
+    await expect(save((url) => (url.endsWith('/package') ? { status: 200, body: { ...pkg, assets: [pkg.assets[0], pkg.assets[0]] } } : undefined))).rejects.toThrow(/duplicate image roles/);
+    await expect(save((url) => (url.endsWith('/package') ? { status: 200, body: { ...pkg, mode: 'live' } } : undefined))).rejects.toThrow(/Package mode live disagrees/);
+    await nothingSaved();
+  });
+
+  it('T07: the expected reviewed-Nepali 501 is recorded as unavailable, not a failed save', async () => {
+    const m = await save(undefined);
+    expect(m.docs.find((d) => d.doc_id === 'report-ne')).toMatchObject({ status: 'unavailable', error_code: 'language_not_ready' });
+    expect(m.assets.some((a) => a.asset_id === 'report-ne')).toBe(false);
+  });
+
+  it('T04: cancelling during a PNG body read saves nothing', async () => {
+    const ctl = new AbortController();
+    const { fetchImpl } = await geographicApi((url) => {
+      if (!url.endsWith('/imagery/after')) return undefined;
+      // Headers now; the body never finishes until the signal aborts it.
+      const body = new ReadableStream({ start: (c) => c.enqueue(new Uint8Array([137, 80])) });
+      setTimeout(() => ctl.abort(), 5);
+      return { status: 200, stream: body } as never;
+    });
+    await expect(createPackage(apiLoaded, createClient({ fetchImpl }), ctl.signal)).rejects.toMatchObject({ kind: 'cancelled' });
+    await nothingSaved();
+  });
+
+  // ---- T08: altered bytes or metadata are refused on reopen ----------------
+  it('T08: altered raster metadata or a re-hashed wrong-scope brief is refused on reopen', async () => {
+    const m = await save(undefined);
+    const d = await db();
+    const stored = (await d.get('manifests', m.package_id)) as typeof m;
+    await d.put('manifests', { ...stored, assets: stored.assets.map((x) => (x.raster ? { ...x, raster: { ...x.raster, acquired_at: '2026-01-01T00:00:00Z' } } : x)) });
+    await expect(openPackage(m.package_id)).rejects.toThrow(/disagrees with source/);
+
+    // Bytes swapped AND manifest hash/size updated consistently: scope still catches it.
+    const wrong = new TextEncoder().encode(JSON.stringify({ ...BRIEF_EN, language: 'ne' }));
+    await d.put('assets', { key: `${m.package_id}/brief-en`, package_id: m.package_id, bytes: wrong.buffer });
+    await d.put('manifests', {
+      ...stored,
+      assets: stored.assets.map((x) => (x.asset_id === 'brief-en' ? { ...x, bytes: wrong.byteLength } : x)),
+    });
+    const fixed = (await d.get('manifests', m.package_id)) as typeof m;
+    const e = fixed.assets.find((x) => x.asset_id === 'brief-en')!;
+    e.sha256 = await sha256Bytes(wrong);
+    await d.put('manifests', fixed);
+    await expect(openPackage(m.package_id)).rejects.toThrow(/is in ne, not the requested en/);
+  });
+
+  it('T08: manifest mode that disagrees with the snapshot is refused', async () => {
+    const m = await save(undefined);
+    const d = await db();
+    const stored = (await d.get('manifests', m.package_id)) as typeof m;
+    await d.put('manifests', { ...stored, assessment_mode: 'live' });
+    await expect(openPackage(m.package_id)).rejects.toThrow(/disagrees with the cached snapshot/);
+  });
+
+  // ---- T09: malformed legacy rows leave the old package untouched -----------
+  it('T09: a malformed legacy report row is refused and the v1 package is left untouched', async () => {
+    const loaded = loadBundledFixture();
+    const text = JSON.stringify(loaded.assessment);
+    const badReport = '{"value": ';
+    const d = await db();
+    const manifest = {
+      manifest_version: LEGACY_MANIFEST_VERSION,
+      package_id: 'pkg-v1-bad',
+      created_at: '2026-10-13T20:00:00.000Z',
+      origin_channel: 'api',
+      assessment_id: loaded.assessment.assessment_id,
+      assessment_mode: 'synthetic',
+      schema_version: '1.0.0',
+      assessment_received_at: '2026-10-13T19:59:00.000Z',
+      aoi: loaded.assessment.bbox,
+      event_date: loaded.assessment.event_date,
+      scene_times: [],
+      attributions: 'Synthetic',
+      basemap: 'none',
+      assets: [
+        { asset_id: 'assessment', media_type: 'application/json', sha256: await sha256(text), bytes: text.length },
+        { asset_id: 'report-en', media_type: 'application/json', sha256: await sha256(badReport), bytes: badReport.length },
+      ],
+      reports: [{ language: 'en', status: 'cached', error_code: null, error_message: null }],
+      limits: [],
+    };
+    await d.put('manifests', manifest as never);
+    await d.put('assets', { key: 'pkg-v1-bad/assessment', package_id: 'pkg-v1-bad', text });
+    await d.put('assets', { key: 'pkg-v1-bad/report-en', package_id: 'pkg-v1-bad', text: badReport });
+    await expect(openPackage('pkg-v1-bad')).rejects.toThrow(/report-en is not valid JSON. The older package was left untouched/);
+    expect(await d.get('manifests', 'pkg-v1-bad')).toEqual(manifest);
+    expect((await d.get('assets', 'pkg-v1-bad/report-en'))!.text).toBe(badReport);
+    expect((await d.get('assets', 'pkg-v1-bad/assessment'))!.bytes).toBeUndefined();
   });
 
   it('keeps mission state in a separate store and restores it', async () => {

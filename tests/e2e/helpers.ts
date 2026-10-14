@@ -55,3 +55,14 @@ export async function loadComputedDemo(page: Page) {
   await page.getByRole('button', { name: 'Load computed demo (synthetic)' }).click();
   await page.getByTestId('map').and(page.locator('[data-ready=true]')).waitFor();
 }
+
+// The simulation is secondary and collapsed by default.
+export async function openMission(page: Page) {
+  const summary = page.getByText('Simulated inspection (optional)');
+  const details = page.locator('details.mission-toggle');
+  if (!(await details.evaluate((d) => (d as HTMLDetailsElement).open))) await summary.click();
+}
+
+export function radarButton(page: Page, name: 'Before' | 'After' | 'Hide') {
+  return page.getByTestId('radar-control').getByRole('button', { name: name === 'Hide' ? 'Hide' : new RegExp(`^${name}`) });
+}

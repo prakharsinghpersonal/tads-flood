@@ -99,7 +99,7 @@ export default function MapView({ assessment, radar, visible, highlight, mission
         container: container.current,
         style: BASE_STYLE,
         bounds: assessment.bbox as [number, number, number, number],
-        fitBoundsOptions: { padding: 24 },
+        fitBoundsOptions: { padding: { top: 104, bottom: 24, left: 24, right: 24 } },
         attributionControl: { compact: true, customAttribution: attributionFor(assessment) },
         dragRotate: false,
         pitchWithRotate: false,
@@ -289,7 +289,7 @@ export default function MapView({ assessment, radar, visible, highlight, mission
     if (!any) return;
     const wide = window.innerWidth > 900;
     map.fitBounds(bounds, {
-      padding: wide ? { top: 40, bottom: 40, left: 40, right: Math.min(420, map.getContainer().clientWidth / 2) } : 40,
+      padding: wide ? { top: 110, bottom: 40, left: 40, right: Math.min(420, map.getContainer().clientWidth / 2) } : { top: 110, bottom: 30, left: 30, right: 30 },
       maxZoom: 16,
       animate: !prefersReducedMotion(),
     });
@@ -345,7 +345,8 @@ export default function MapView({ assessment, radar, visible, highlight, mission
   useEffect(() => {
     const map = loadedMap;
     if (!map || map !== mapRef.current) return;
-    map.fitBounds(assessment.bbox as [number, number, number, number], { padding: 24, animate: !prefersReducedMotion() });
+    // Top padding keeps the area clear of the radar control overlay.
+    map.fitBounds(assessment.bbox as [number, number, number, number], { padding: { top: 104, bottom: 24, left: 24, right: 24 }, animate: !prefersReducedMotion() });
   }, [assessment, loadedMap]);
 
   return (

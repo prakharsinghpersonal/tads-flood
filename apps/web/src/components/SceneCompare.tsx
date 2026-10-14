@@ -9,12 +9,11 @@ interface Props {
   load: SceneLoad;
   view: RadarView;
   opacity: number;
-  onView: (v: RadarView) => void;
   onOpacity: (v: number) => void;
   onSelect: (sel: Selection) => void;
 }
 
-export default function SceneCompare({ assessment, load, view, opacity, onView, onOpacity, onSelect }: Props) {
+export default function SceneCompare({ assessment, load, view, opacity, onOpacity, onSelect }: Props) {
   const scenes = load.status === 'ready' ? load.scenes : [];
   const before = scenes.find((s) => s.asset.role === 'before_radar');
   const after = scenes.find((s) => s.asset.role === 'after_radar');
@@ -56,7 +55,7 @@ export default function SceneCompare({ assessment, load, view, opacity, onView, 
 
   return (
     <section aria-labelledby="imagery-title" className="panel-section">
-      <h2 id="imagery-title">Radar before / after</h2>
+      <h2 id="imagery-title">Radar scenes</h2>
       <ul className="scene-list" data-testid="imagery-scenes">
         {sceneRow('Before event', before, legacy.before.map((s) => s.source_id), legacy.before.map((s) => formatTime(s.acquired_at)))}
         {sceneRow('After event', after, legacy.after.map((s) => s.source_id), legacy.after.map((s) => formatTime(s.acquired_at)))}
@@ -75,25 +74,13 @@ export default function SceneCompare({ assessment, load, view, opacity, onView, 
       )}
       {load.status === 'ready' && (
         <>
-          <div className="segmented" role="group" aria-label="Radar image on map">
-            {(['before', 'after', 'off'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={view === v}
-                disabled={v === 'before' ? !before : v === 'after' ? !after : false}
-                onClick={() => onView(v)}
-              >
-                {v === 'before' ? 'Before' : v === 'after' ? 'After' : 'Hide'}
-              </button>
-            ))}
-          </div>
+          <p className="small">Use the Before / After control on the map to switch images.</p>
           <label className="field opacity">
             <span>Image opacity {Math.round(opacity * 100)}%</span>
             <input type="range" min={0.2} max={1} step={0.1} value={opacity} disabled={view === 'off'} onChange={(e) => onOpacity(Number(e.target.value))} />
           </label>
           <p className="small muted">
-            {(before ?? after)?.asset.rendering}. Transparent cells are no-data and stay unknown. Bright/dark change is a candidate signal, not confirmed flooding.
+            {(before ?? after)?.asset.rendering}. Grey shades are radar backscatter; transparent cells have no data and stay unknown. A darker after-image is a candidate water signal, not confirmed flooding.
           </p>
         </>
       )}
