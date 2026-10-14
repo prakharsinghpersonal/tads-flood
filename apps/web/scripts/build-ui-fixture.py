@@ -114,8 +114,8 @@ assessment = {
     "generated_at": "2026-10-13T12:00:00Z",
     "sources": [
         src("synthetic-graph-ui-001", "synthetic", "2026-08-25T12:00:00Z", "invented road graph and assets"),
-        src("synthetic-s1-before", "sentinel_1", "2026-08-14T00:21:00Z", "stand-in for a pre-event radar scene; no Copernicus data"),
-        src("synthetic-s1-after", "sentinel_1", "2026-08-26T00:21:00Z", "stand-in for a post-event radar scene; no Copernicus data"),
+        src("synthetic-s1-before", "synthetic", "2026-08-14T00:21:00Z", "stand-in for a pre-event radar scene; no Copernicus data"),
+        src("synthetic-s1-after", "synthetic", "2026-08-26T00:21:00Z", "stand-in for a post-event radar scene; no Copernicus data"),
     ],
     "quality": {"status": "partial", "valid_fraction": 0.93,
                 "warnings": ["Synthetic UI fixture. Geometry, scenes and scores are invented for interface tests.",

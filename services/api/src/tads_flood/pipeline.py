@@ -17,7 +17,7 @@ from .models import Assessment, Source, Quality, Summary, Layers, FeatureCollect
 from .providers import CDSEProvider, OhsomeProvider, CatalogScene
 from .topology import build_road_graph
 
-PIPELINE_VERSION = "flood-assessment-v1.2"
+PIPELINE_VERSION = "flood-assessment-v1.3"
 
 
 @dataclass
@@ -161,7 +161,9 @@ def assemble_assessment(request, bundle, cache: ContentCache, *, progress=lambda
         settlements=results, evidence=evidence, limitations=warnings + (["Synthetic geographic training data; no real finding about this area."] if bundle.mode == "synthetic" else []))
     assets = {}
     for phase, raster in (("before", before), ("after", after)):
-        assets[phase] = cache.put(radar_preview(raster), {"assessment_id": assessment_id, "role": phase + "-radar-preview", "mode": bundle.mode})
+        scene = b if phase == "before" else a
+        assets[phase] = cache.put(radar_preview(raster), {"assessment_id": assessment_id, "role": phase + "-radar-preview",
+            "mode": bundle.mode, "source_id": scene.product_id, "acquired_at": scene.acquired_at.isoformat()})
     return assessment, assets
 
 

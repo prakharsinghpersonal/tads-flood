@@ -61,6 +61,16 @@ describe('v1 contract parsing', () => {
     expect(parseAssessment(p).ok).toBe(false);
   });
 
+  it('keeps source kinds consistent with synthetic and live modes', () => {
+    const training = clone(shared);
+    training.sources[0].kind = 'sentinel_1';
+    expect(parseAssessment(training).ok).toBe(false);
+    const live = clone(shared);
+    live.mode = 'live';
+    live.sources[0].uri = '/api/v1/assessments/example/sources/example';
+    expect(parseAssessment(live).ok).toBe(false);
+  });
+
   it('warns (does not recompute) when summary disagrees with settlement list', () => {
     const p = clone(shared);
     p.summary.potentially_isolated_count = 3;

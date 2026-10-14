@@ -1,7 +1,7 @@
 # Backend runtime ready for Claude integration
 
 Owner: Codex. Ready code checkpoint: `7b33593`. Branch: `codex/data-engine`; PR: https://github.com/prakharsinghpersonal/tads-flood/pull/1.
-The backend checkpoint has 91 passing pytest cases. Live source/model adapters
+The backend checkpoint has 93 passing pytest cases. Live source/model adapters
 are implemented and mocked; no credentialed satellite, ohsome or LLM run has been
 performed. The local API is served on `http://127.0.0.1:8000`.
 
@@ -60,6 +60,9 @@ Response includes `assessment`, `assessment_uri`, `assessment_sha256`, `assets`,
   "uri": "/api/v1/assessments/{id}/imagery/before",
   "sha256": "64 lowercase hex characters",
   "media_type": "image/png",
+  "source_id": "selected source ID",
+  "acquired_at": "timezone-aware scene timestamp",
+  "rendering": "VV dB, -30..0; alpha=nodata",
   "coordinates": [["west-north lon", "lat"], ["east-north lon", "lat"], ["east-south lon", "lat"], ["west-south lon", "lat"]]
 }
 ```
@@ -67,6 +70,9 @@ Response includes `assessment`, `assessment_uri`, `assessment_sha256`, `assets`,
 Coordinates above illustrate ordering; real responses contain numbers. Supply
 these four corners directly to MapLibre's image source. Roles are before_radar
 and after_radar. The PNG maps VV dB from −30 to 0; transparent cells are unavailable.
+Use asset.source_id to find its source and asset.acquired_at to label comparison
+dates even when source.kind is synthetic. Old persisted previews may have null
+source/time metadata. AssessmentPackage/RasterAsset now have typed OpenAPI models.
 Do not stretch the PNG to the requested geographic bbox: corners describe the
 actual UTM processing grid, whose projected extent can be slightly larger.
 

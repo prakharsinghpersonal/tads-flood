@@ -32,7 +32,7 @@ Claude's additive integration endpoints and the response to its proposal.
 
 ## Measured checks
 
-- Python 3.12.14, `python -m pytest`: **91 passed**, one upstream Starlette
+- Python 3.12.14, `python -m pytest`: **93 passed**, one upstream Starlette
   TestClient/httpx deprecation warning. These are automated backend tests, not
   the number of completed release gates.
 - `python -m pip check`: no broken requirements.

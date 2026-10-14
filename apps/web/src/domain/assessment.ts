@@ -109,7 +109,10 @@ export function stringList(v: unknown): string[] {
 // acquisition timestamp; the v1 contract has no explicit before/after field.
 export function imagerySources(a: Assessment) {
   const eventStart = Date.parse(`${a.event_date}T00:00:00Z`);
-  const imagery = a.sources.filter((s) => s.kind === 'sentinel_1' || s.kind === 'sentinel_2');
+  const imagery = a.sources.filter((s) => s.kind === 'sentinel_1' || s.kind === 'sentinel_2' ||
+    // Declared stand-in scene IDs from the legacy bundled UI fixture. These
+    // remain synthetic; the computed API scene will use manifest asset roles.
+    (a.mode === 'synthetic' && s.kind === 'synthetic' && s.uri.startsWith('synthetic://') && s.source_id.startsWith('synthetic-s1-')));
   const before = imagery.filter((s) => Date.parse(s.acquired_at) < eventStart);
   const after = imagery.filter((s) => Date.parse(s.acquired_at) >= eventStart);
   return { before, after };

@@ -1,7 +1,7 @@
 # Implemented backend method and reproducibility limits
 
 This describes the code checkpoint, not a validated disaster-response method.
-Assessment schema: 1.0.0; pipeline fingerprint: flood-assessment-v1.2; radar
+Assessment schema: 1.0.0; pipeline fingerprint: flood-assessment-v1.3; radar
 method: sar-change-baseline-v1. Independent geographic evaluation is pending.
 
 ## Inputs and source selection

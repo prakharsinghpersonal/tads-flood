@@ -83,7 +83,7 @@ real data, real drone autonomy, or competition eligibility. Retain failing cases
 
 ## Backend checkpoint evidence
 
-The runtime checkpoint has 91 passing backend tests. Representative executable
+The runtime checkpoint has 93 passing backend tests. Representative executable
 coverage: V01–V03 request/budget guards; P01–P04/P07–P08 compatibility, shadows,
 permanent water and nodata; P10–P11 mock failures/retry budgets; D01–D03 historical
 input and cache integrity; G01–G08 graph counterexamples; A01–A05 claim selection,

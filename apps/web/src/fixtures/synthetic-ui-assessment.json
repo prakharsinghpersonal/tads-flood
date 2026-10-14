@@ -22,7 +22,7 @@
     },
     {
       "source_id": "synthetic-s1-before",
-      "kind": "sentinel_1",
+      "kind": "synthetic",
       "acquired_at": "2026-08-14T00:21:00Z",
       "uri": "synthetic://synthetic-s1-before",
       "license": "MIT; original synthetic fixture (stand-in for a pre-event radar scene; no Copernicus data)",
@@ -31,7 +31,7 @@
     },
     {
       "source_id": "synthetic-s1-after",
-      "kind": "sentinel_1",
+      "kind": "synthetic",
       "acquired_at": "2026-08-26T00:21:00Z",
       "uri": "synthetic://synthetic-s1-after",
       "license": "MIT; original synthetic fixture (stand-in for a post-event radar scene; no Copernicus data)",

@@ -31,7 +31,7 @@ class ContentCache:
         temp_manifest.replace(destination / f"manifest-{manifest_hash}.json")
         return digest
 
-    def metadata(self, digest, source_id):
+    def metadata(self, digest, source_id=None):
         self.get(digest)
         records = []
         for path in sorted((self.root / digest).glob("manifest-*.json")):
@@ -41,7 +41,7 @@ class ContentCache:
                 identifier = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
                 if path.name != f"manifest-{identifier}.json" or manifest.get("sha256") != digest:
                     raise ValueError("Manifest checksum mismatch")
-                if manifest.get("source_id") == source_id:
+                if source_id is None or manifest.get("source_id") == source_id:
                     records.append(manifest)
             except (ValueError, TypeError) as exc:
                 raise PipelineError("cache_integrity_error", "Cached source manifest failed its integrity check.") from exc

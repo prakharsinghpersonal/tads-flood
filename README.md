@@ -22,6 +22,8 @@ gates. Synthetic results do not establish real-world performance.
 - [Three-minute demo and judging evidence](docs/DEMO_PLAN.md)
 - [Sources, data policy, and unresolved questions](docs/DATA_POLICY.md)
 - [Actual development status](docs/STATUS.md)
+- [Implemented backend thresholds and limitations](docs/BACKEND_METHOD.md)
+- [Claude's next integration assignment](docs/CLAUDE_NEXT.md)
 
 ## Development
 
@@ -37,6 +39,23 @@ python -m pytest
 python scripts/export_contracts.py
 python -m uvicorn tads_flood.api:app --app-dir services/api/src --reload --port 8000
 ```
+
+The reviewed Claude UI checkpoint is included on `codex/data-engine`. Install its
+exact lockfile and start both local services from the repository root:
+
+```sh
+npm ci --prefix apps/web
+python scripts/dev.py
+```
+
+Open `http://127.0.0.1:5173`. Use `--web-port 5175` if another checkout uses 5173.
+The launcher reuses a compatible local API, strips server credential variables
+from the frontend process, and stops only its own processes on Ctrl-C. Run the
+combined checks with `python scripts/check_workspace.py --browser` after
+`cd apps/web && npx playwright install chromium` where a browser is not installed.
+The current UI supports the legacy API fixture and a separately labeled bundled
+geometry fixture. Wiring computed scene imagery/packages/copilot is Claude's
+next task; frontend dependency audit remediation remains open.
 
 The generated OpenAPI and assessment schema live in `contracts/`. The synthetic
 starter response remains in `fixtures/synthetic/assessment.json`. The richer

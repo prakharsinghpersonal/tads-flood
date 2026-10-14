@@ -17,7 +17,7 @@ from .cache import ContentCache
 from .connectivity import analyze_isolation
 from .copilot import generate_answer, deterministic_bilingual_report
 from .errors import PipelineError
-from .models import Assessment, AssessmentRequest, IsolationRequest, SettlementResult, Report, GroundedReport, SCHEMA_VERSION, StrictModel
+from .models import Assessment, AssessmentRequest, AssessmentPackage, IsolationRequest, SettlementResult, Report, GroundedReport, SCHEMA_VERSION, StrictModel
 from .pipeline import assemble_assessment, run_live
 from .reports import build_report, render_brief
 from .settings import Settings
@@ -236,7 +236,7 @@ def create_app(*, settings=None, store=None, cache=None, runner=run_live):
                 "evidence_ids": [e.evidence_id for e in result[0].evidence if source_id in e.source_ids],
                 "cache_manifests": storage()[1].metadata(source.sha256, source_id) if result[1] else []}
 
-    @app.get("/api/v1/assessments/{assessment_id}/package")
+    @app.get("/api/v1/assessments/{assessment_id}/package", response_model=AssessmentPackage)
     def package(assessment_id: str):
         result = find_assessment(assessment_id)
         if result is None:
@@ -248,12 +248,20 @@ def create_app(*, settings=None, store=None, cache=None, runner=run_live):
         transform = Transformer.from_crs(grid.epsg, 4326, always_xy=True)
         west, south, east, north = grid.bounds
         coordinates = [list(transform.transform(x, y)) for x, y in ((west, north), (east, north), (east, south), (west, south))]
+        raster_assets = []
+        for phase, digest in assets.items():
+            manifests = storage()[1].metadata(digest)
+            manifest = next((item for item in manifests if item.get("assessment_id") == assessment_id
+                and item.get("role") == phase + "-radar-preview" and item.get("source_id")), {})
+            raster_assets.append({"role": phase + "_radar", "uri": f"/api/v1/assessments/{assessment_id}/imagery/{phase}",
+                "sha256": digest, "media_type": "image/png", "coordinates": coordinates,
+                "source_id": manifest.get("source_id"), "acquired_at": manifest.get("acquired_at"),
+                "rendering": "VV dB, -30..0; alpha=nodata"})
         return {"schema_version": SCHEMA_VERSION, "assessment_id": assessment_id, "mode": value.mode,
                 "assessment": value.model_dump(mode="json"),
                 "assessment_uri": f"/api/v1/assessments/{assessment_id}/snapshot",
                 "assessment_sha256": hashlib.sha256(value.model_dump_json().encode()).hexdigest(),
-                "assets": [{"role": phase + "_radar", "uri": f"/api/v1/assessments/{assessment_id}/imagery/{phase}",
-                            "sha256": digest, "media_type": "image/png", "coordinates": coordinates} for phase, digest in assets.items()],
+                "assets": raster_assets,
                 "attribution": ["Contains modified Copernicus Sentinel data 2026.", "© OpenStreetMap contributors."] if value.mode != "synthetic" else ["Synthetic training data; no real-world flood finding."],
                 "limitations": value.limitations}
 

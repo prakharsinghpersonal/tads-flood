@@ -40,6 +40,9 @@ def test_geographic_demo_package_and_images_have_verifiable_hashes(tmp_path):
         snapshot = client.get(package["assessment_uri"])
         assert package["assessment_sha256"] == hashlib.sha256(snapshot.content).hexdigest()
         for asset in package["assets"]:
+            assert asset["source_id"] in {source.source_id for source in value.sources}
+            source = next(source for source in value.sources if source.source_id == asset["source_id"])
+            assert datetime.fromisoformat(asset["acquired_at"]) == source.acquired_at
             image = client.get(asset["uri"])
             assert image.headers["content-type"] == "image/png"
             assert hashlib.sha256(image.content).hexdigest() == asset["sha256"]

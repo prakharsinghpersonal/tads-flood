@@ -550,7 +550,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentPackage"
+                }
               }
             }
           },
@@ -713,6 +715,75 @@
           "limitations"
         ],
         "title": "Assessment"
+      },
+      "AssessmentPackage": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0.0",
+            "title": "Schema Version"
+          },
+          "assessment_id": {
+            "type": "string",
+            "title": "Assessment Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "synthetic",
+              "live",
+              "cached_live"
+            ],
+            "title": "Mode"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/Assessment"
+          },
+          "assessment_uri": {
+            "type": "string",
+            "title": "Assessment Uri"
+          },
+          "assessment_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Assessment Sha256"
+          },
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/RasterAsset"
+            },
+            "type": "array",
+            "title": "Assets"
+          },
+          "attribution": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Attribution"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "assessment_id",
+          "mode",
+          "assessment",
+          "assessment_uri",
+          "assessment_sha256",
+          "assets",
+          "attribution",
+          "limitations"
+        ],
+        "title": "AssessmentPackage"
       },
       "AssessmentRequest": {
         "properties": {
@@ -1118,6 +1189,91 @@
           "method_version"
         ],
         "title": "Quality"
+      },
+      "RasterAsset": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "before_radar",
+              "after_radar"
+            ],
+            "title": "Role"
+          },
+          "uri": {
+            "type": "string",
+            "title": "Uri"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256"
+          },
+          "media_type": {
+            "type": "string",
+            "const": "image/png",
+            "title": "Media Type"
+          },
+          "coordinates": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Coordinates"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "acquired_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acquired At"
+          },
+          "rendering": {
+            "type": "string",
+            "title": "Rendering"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role",
+          "uri",
+          "sha256",
+          "media_type",
+          "coordinates",
+          "source_id",
+          "acquired_at",
+          "rendering"
+        ],
+        "title": "RasterAsset"
       },
       "Report": {
         "properties": {

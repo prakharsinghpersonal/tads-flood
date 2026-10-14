@@ -85,6 +85,9 @@ verified closure. An unknown graph location cannot become a definitive cut.
   SHA-256 checksums, attributions and limitations. Raster assets have `role`
   before_radar/after_radar, `uri`, `sha256`, `media_type`, and image-source corner
   `coordinates` ordered top-left, top-right, bottom-right, bottom-left in WGS84.
+  New previews also carry `source_id`, `acquired_at`, `rendering` so synthetic
+  scene dates do not depend on source.kind filters. Old persisted previews can
+  have null source/time metadata; show unavailable rather than invent it.
 - `GET /api/v1/assessments/{id}/snapshot`: exact assessment JSON bytes matching
   package.assessment_sha256. Hash these bytes, not reserialized JS objects.
 - `GET /api/v1/assessments/{id}/imagery/before|after`: RGBA PNG, VV dB rendered
@@ -97,6 +100,8 @@ verified closure. An unknown graph location cannot become a definitive cut.
 Report/ReportClaim and GroundedReport now have typed OpenAPI models. GroundedReport
 adds `model`, `refused`, `answer`, `translation_reviewed`; numerical facts are
 the same computed summary in both languages.
+AssessmentPackage and RasterAsset are typed too; non-null asset source/time
+metadata must resolve exactly to a source record in the packaged assessment.
 
 Feature conventions accepted from Claude's proposal: roads `candidate_blocked`
 or `not_exposed`, buildings `exposed` or `not_exposed`, and `unknown` where coverage

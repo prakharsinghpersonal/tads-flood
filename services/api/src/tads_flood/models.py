@@ -184,6 +184,49 @@ class Assessment(StrictModel):
         return self
 
 
+class RasterAsset(StrictModel):
+    role: Literal["before_radar", "after_radar"]
+    uri: str
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    media_type: Literal["image/png"]
+    coordinates: list[tuple[float, float]] = Field(min_length=4, max_length=4)
+    source_id: str | None
+    acquired_at: datetime | None
+    rendering: str
+
+    @field_validator("acquired_at")
+    @classmethod
+    def aware_time(cls, value):
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("Asset acquisition time must be timezone aware")
+        return value
+
+
+class AssessmentPackage(StrictModel):
+    schema_version: Literal["1.0.0"]
+    assessment_id: str
+    mode: Literal["synthetic", "live", "cached_live"]
+    assessment: Assessment
+    assessment_uri: str
+    assessment_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    assets: list[RasterAsset]
+    attribution: list[str]
+    limitations: list[str]
+
+    @model_validator(mode="after")
+    def matching_scope(self):
+        if self.assessment_id != self.assessment.assessment_id or self.mode != self.assessment.mode:
+            raise ValueError("Package scope and mode must match its assessment")
+        sources = {source.source_id: source for source in self.assessment.sources}
+        if len({asset.role for asset in self.assets}) != len(self.assets):
+            raise ValueError("Package raster roles must be unique")
+        for asset in self.assets:
+            if asset.source_id is not None:
+                if asset.source_id not in sources or asset.acquired_at != sources[asset.source_id].acquired_at:
+                    raise ValueError("Asset source and acquisition time must resolve to assessment provenance")
+        return self
+
+
 class Node(StrictModel):
     node_id: str
 

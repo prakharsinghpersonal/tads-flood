@@ -223,11 +223,11 @@ export function parseAssessment(payload: unknown): ParseResult {
       if (!evidenceIds.has(id)) issues.push(`settlement ${st.settlement_id}: unknown evidence ${id}`);
     }
   }
-  if (a.mode === 'synthetic' && a.sources.some((src) => src.kind !== 'synthetic' && !src.uri.startsWith('synthetic://'))) {
-    warnings.push('Synthetic assessment lists a non-synthetic source; treat all of its content as synthetic.');
+  if (a.mode === 'synthetic' && a.sources.some((src) => src.kind !== 'synthetic')) {
+    issues.push('Synthetic assessment must use synthetic source kinds.');
   }
-  if (a.mode !== 'synthetic' && a.sources.some((src) => src.uri.startsWith('synthetic://'))) {
-    issues.push(`mode ${a.mode} cannot reference synthetic:// sources`);
+  if (a.mode !== 'synthetic' && a.sources.some((src) => src.kind === 'synthetic' || src.uri.startsWith('synthetic://'))) {
+    issues.push(`mode ${a.mode} cannot reference synthetic kinds or synthetic:// sources`);
   }
   // Summary counts are backend facts. The browser only checks that they agree
   // with the backend's own settlement list; it never substitutes its own total.
