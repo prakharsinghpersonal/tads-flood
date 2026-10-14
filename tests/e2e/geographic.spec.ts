@@ -1,7 +1,7 @@
 // Computed geographic demo, radar comparison, binary packages and copilot.
 // All /api traffic is INTERCEPTED with responses recorded from Codex's backend.
 import { expect, test } from '@playwright/test';
-import { GEO_ID, loadComputedDemo, routeRecordedApi } from './helpers';
+import { GEO_ID, loadComputedDemo, openMission, radarButton, routeRecordedApi } from './helpers';
 
 test('radar before/after draws decoded PNGs at manifest corners with both dates', async ({ page }) => {
   await routeRecordedApi(page);
@@ -13,7 +13,8 @@ test('radar before/after draws decoded PNGs at manifest corners with both dates'
   await expect(page.getByTestId('scene-date-before_radar')).toHaveText('2026-08-20 00:00Z');
   await expect(page.getByTestId('scene-date-after_radar')).toHaveText('2026-09-01 00:00Z');
   // Keyboard-only comparison.
-  await page.getByRole('button', { name: 'Before', exact: true }).focus();
+  await expect(radarButton(page, 'After')).toContainText('2026-09-01');
+  await radarButton(page, 'Before').focus();
   await page.keyboard.press('Enter');
   await expect(map).toHaveAttribute('data-radar', 'before:before_radar,after_radar');
   await page.getByRole('slider').focus();
@@ -59,6 +60,7 @@ test('exact package survives offline reload: both images, briefs, mission; copil
   await page.getByRole('button', { name: 'Save current assessment as offline package' }).click();
   await expect(page.getByTestId('channel-badge')).toContainText('Cached offline package');
   await expect(page.getByTestId('package-item')).toContainText('Exact backend package (server hashes)');
+  await openMission(page);
   await page.getByRole('button', { name: 'Start simulation' }).click();
   await page.getByRole('button', { name: 'Advance 5 steps' }).click();
   const received = await page.getByRole('heading', { name: /Received simulated observations/ }).innerText();
@@ -69,6 +71,8 @@ test('exact package survives offline reload: both images, briefs, mission; copil
   await expect(page.getByTestId('channel-badge')).toContainText('Cached offline package');
   await expect(page.getByTestId('mode-badge')).toHaveText('SYNTHETIC');
   // Network loss is not radio loss.
+  await openMission(page);
+  await expect(page.getByTestId('mission-internet')).toHaveText('Internet: offline');
   await expect(page.getByTestId('link-badge')).toHaveText('Drone radio link: connected');
   await expect(page.getByRole('heading', { name: /Received simulated observations/ })).toHaveText(received);
   const map = page.getByTestId('map');
@@ -110,3 +114,18 @@ for (const width of [320, 768, 1440]) {
     await page.screenshot({ path: `test-results/screens/geo-${width}.png` });
   });
 }
+
+test('print view keeps the Nepali DRAFT badge and hides the workspace chrome', async ({ page }) => {
+  await routeRecordedApi(page);
+  await page.goto('/');
+  await loadComputedDemo(page);
+  await page.getByRole('tab', { name: 'Report' }).click();
+  await page.getByRole('button', { name: /Nepali/ }).click();
+  await expect(page.getByTestId('draft-badge')).toBeVisible();
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.getByTestId('draft-badge')).toBeVisible();
+  await expect(page.getByTestId('report-generator')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Assessment' })).toBeHidden();
+  await expect(page.getByTestId('radar-control')).toBeHidden();
+  await page.screenshot({ path: 'test-results/screens/print-ne.png', fullPage: true });
+});

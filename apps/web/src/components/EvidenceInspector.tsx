@@ -3,6 +3,8 @@ import type { Evidence, Source } from '../api/contract';
 import {
   CHANNEL_LABEL,
   STATUS_EXPLAINER,
+  edgeLabel,
+  featureLabel,
   STATUS_LABEL,
   evidenceById,
   formatTime,
@@ -48,19 +50,21 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
     heading.current?.focus();
   }, [key]);
 
+  const edgeName = (id: string) => edgeLabel(features.get(id)?.feature, id);
+  const facilityName = (id: string | null) => (id ? featureLabel(features.get(id)?.feature, id) : null);
   const edgeButton = (id: string, tone?: 'cut') => {
     const exists = features.has(id);
     return (
       <li key={id}>
         <button
           type="button"
-          className={`chip ${tone === 'cut' ? 'chip-cut' : ''}`}
+          className={`chip chip-edge ${tone === 'cut' ? 'chip-cut' : ''}`}
           onClick={() => onSelect({ kind: 'feature', layer: 'roads', id })}
           disabled={!exists}
-          title={exists ? undefined : 'No geometry for this edge in the assessment'}
+          title={exists ? `Show ${id} on the map` : 'No geometry for this edge in the assessment'}
         >
-          {id}
-          {!exists && ' (no geometry)'}
+          <span className="chip-label">{exists ? edgeName(id) : 'No geometry'}</span>
+          <code className="chip-id">{id}</code>
         </button>
       </li>
     );
@@ -78,7 +82,11 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
     } else {
       title = settlementName(a, s);
       evidenceIds = s.evidence_ids;
-      const access = s.any_facility_access === null ? 'Unknown' : s.any_facility_access ? 'Yes' : 'No route found';
+      const access = s.any_facility_access === null ? 'Unknown' : s.any_facility_access ? 'A mapped route remains (passability not verified)' : 'No mapped route found';
+      const cutNames = s.candidate_cut_edge_ids.map((id) => `the ${edgeName(id).split(' · ')[0].toLowerCase()}`);
+      const cutPhrase = cutNames.length > 1 ? `${cutNames.slice(0, -1).join(', ')} and ${cutNames.at(-1)}` : (cutNames[0] ?? '');
+      const before = facilityName(s.baseline_facility_id);
+      const after = facilityName(s.post_event_facility_id);
       body = (
         <>
           <p className={`status status-${s.status}`} data-testid="inspector-status">
@@ -88,45 +96,57 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
             <h3>What this means</h3>
             <p>
               {s.status === 'potentially_isolated' &&
-                `${s.candidate_cut_edge_ids.length ? `If ${s.candidate_cut_edge_ids.join(', ')} ${s.candidate_cut_edge_ids.length > 1 ? 'are' : 'is'} impassable, ` : ''}no mapped route to a facility remains. Check the cut edge's sources before acting.`}
+                `${cutNames.length ? `If ${cutPhrase} ${cutNames.length > 1 ? 'are' : 'is'} impassable, ` : ''}no mapped route to ${before ?? 'a facility'} or any other facility remains. Open a cut below to check its sources.`}
               {s.status === 'connected' &&
                 (s.candidate_cut_edge_ids.length
-                  ? `The usual route crosses ${s.candidate_cut_edge_ids.join(', ')}, but an alternate route to ${s.post_event_facility_id ?? 'a facility'} remains.`
-                  : `The usual route to ${s.post_event_facility_id ?? 'a facility'} has no candidate exposure.`)}
+                  ? `The usual route crosses ${cutPhrase}, but another mapped route to ${after ?? 'a facility'} remains. That route is not verified as passable or safe.`
+                  : `A mapped route to ${after ?? 'a facility'} remains with no candidate exposure. That is not a safety assessment.`)}
               {s.status === 'preexisting_disconnected' && 'No mapped route existed before the event. This is a map gap or a pre-existing condition, not flood impact.'}
               {s.status === 'unknown_network' && 'The settlement could not be placed on the road network. Road access is unknown; do not treat it as safe.'}
             </p>
-            <p className="small muted">Backend reason: {s.reason}</p>
           </div>
           <dl className="kv">
-            <dt>Settlement ID</dt>
-            <dd>{s.settlement_id}</dd>
-            <dt>Baseline nearest facility</dt>
-            <dd>{s.baseline_facility_id ?? 'None found before event'}</dd>
-            <dt>Post-event facility</dt>
-            <dd>{s.post_event_facility_id ?? 'None found'}</dd>
-            <dt>Access to any facility after event</dt>
+            <dt>Nearest facility before</dt>
+            <dd>{before ?? 'No mapped facility reachable before the event'}</dd>
+            <dt>Facility after</dt>
+            <dd>{after ?? 'None reachable on the mapped network'}</dd>
+            <dt>Any facility after</dt>
             <dd>{access}</dd>
           </dl>
-          <h4>Pre-event route</h4>
-          {s.baseline_route_edge_ids.length ? <ul className="chips" aria-label="Pre-event route edges">{s.baseline_route_edge_ids.map((id) => edgeButton(id))}</ul> : <p className="muted">No pre-event route.</p>}
-          <h4>Post-event route</h4>
-          {s.post_event_route_edge_ids.length ? <ul className="chips" aria-label="Post-event route edges">{s.post_event_route_edge_ids.map((id) => edgeButton(id))}</ul> : <p className="muted">No post-event route available.</p>}
           <h4>Candidate cut edges</h4>
           {s.candidate_cut_edge_ids.length ? (
             <>
               <ul className="chips" aria-label="Candidate cut edges">{s.candidate_cut_edge_ids.map((id) => edgeButton(id, 'cut'))}</ul>
-              <p className="muted small">Candidate exposure from the assessment, not a verified closure.</p>
+              <p className="muted small">Inferred from candidate exposure, not a verified closure. Open one to see its sources.</p>
             </>
           ) : (
-            <p className="muted">None.</p>
+            <p className="muted small">None.</p>
           )}
+          <details className="more">
+            <summary>
+              Route edges (before: {s.baseline_route_edge_ids.length}, after: {s.post_event_route_edge_ids.length})
+            </summary>
+            <h4>Pre-event route</h4>
+            {s.baseline_route_edge_ids.length ? <ul className="chips" aria-label="Pre-event route edges">{s.baseline_route_edge_ids.map((id) => edgeButton(id))}</ul> : <p className="muted small">No pre-event route.</p>}
+            <h4>Post-event route</h4>
+            {s.post_event_route_edge_ids.length ? <ul className="chips" aria-label="Post-event route edges">{s.post_event_route_edge_ids.map((id) => edgeButton(id))}</ul> : <p className="muted small">No post-event route available.</p>}
+            <dl className="kv small">
+              <dt>Settlement ID</dt>
+              <dd>{s.settlement_id}</dd>
+              <dt>Facility IDs</dt>
+              <dd>
+                {s.baseline_facility_id ?? 'none'} → {s.post_event_facility_id ?? 'none'}
+              </dd>
+              <dt>Backend reason</dt>
+              <dd>{s.reason}</dd>
+            </dl>
+          </details>
         </>
       );
     }
   } else if (selection.kind === 'feature') {
     const ref = features.get(selection.id);
-    title = String(prop(ref?.feature, 'name') ?? selection.id);
+    title = ref?.layer === 'roads' ? edgeName(selection.id) : String(prop(ref?.feature, 'name') ?? selection.id);
     evidenceIds = stringList(prop(ref?.feature, 'evidence_ids'));
     const srcId = prop(ref?.feature, 'source_id');
     const status = prop(ref?.feature, 'status');
@@ -137,13 +157,13 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
     const isFacility = prop(ref?.feature, 'kind') === 'facility' || typeof prop(ref?.feature, 'amenity') === 'string';
     const servedBaseline = a.settlements.filter((s) => s.baseline_facility_id === selection.id);
     const servedPost = a.settlements.filter((s) => s.post_event_facility_id === selection.id);
+    const srcRec = typeof srcId === 'string' ? sources.get(srcId) : undefined;
+    const cutFor = a.settlements.filter((s) => s.candidate_cut_edge_ids.includes(selection.id));
+    const lengthM = prop(ref?.feature, 'length_m');
+    const exposedM = prop(ref?.feature, 'exposed_length_m');
     body = ref ? (
       <>
         <dl className="kv">
-          <dt>Layer</dt>
-          <dd>{ref.layer}</dd>
-          <dt>Feature ID</dt>
-          <dd>{ref.id}</dd>
           {isFacility ? (
             <>
               <dt>Facility</dt>
@@ -153,16 +173,44 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
             <>
               <dt>Status</dt>
               <dd data-testid="inspector-status">
-                {status === 'unknown' ? 'unknown coverage — not known to be passable or blocked' : typeof status === 'string' ? status.replace(/_/g, ' ') : 'not provided'}
+                {status === 'unknown'
+                  ? 'unknown coverage — not known to be passable or blocked'
+                  : status === 'candidate_blocked'
+                    ? 'candidate blocked — inferred, not a verified closure'
+                    : typeof status === 'string'
+                      ? status.replace(/_/g, ' ')
+                      : 'not provided'}
               </dd>
             </>
           )}
-          {ref.layer === 'roads' && (
+          {cutFor.length > 0 && (
             <>
-              <dt>Candidate blocked</dt>
-              <dd>{prop(ref.feature, 'candidate_blocked') === true ? 'Yes — candidate, not verified closure' : 'No'}</dd>
+              <dt>Consequence</dt>
+              <dd data-testid="edge-consequence">
+                Candidate cut on the route of {cutFor.map((x) => settlementName(a, x)).join(', ')}
+                {cutFor.some((x) => x.status === 'potentially_isolated') ? '; no mapped alternate route remains for ' + cutFor.filter((x) => x.status === 'potentially_isolated').map((x) => settlementName(a, x)).join(', ') : '; another mapped route remains'}.
+              </dd>
+            </>
+          )}
+          <dt>Source</dt>
+          <dd>
+            {typeof srcId === 'string' ? (
+              <>
+                <button type="button" className="link" onClick={() => onSelect({ kind: 'source', id: srcId })}>
+                  {srcId}
+                </button>
+                {srcRec && <span className="small"> · acquired {formatTime(srcRec.acquired_at)}</span>}
+              </>
+            ) : (
+              'not provided'
+            )}
+          </dd>
+          {ref.layer === 'roads' && typeof lengthM === 'number' && (
+            <>
               <dt>Length</dt>
-              <dd>{typeof prop(ref.feature, 'length_m') === 'number' ? `${prop(ref.feature, 'length_m')} m` : 'not provided'}</dd>
+              <dd>
+                {Math.round(lengthM)} m{typeof exposedM === 'number' ? `, ${Math.round(exposedM)} m inside candidate exposure` : ''}
+              </dd>
             </>
           )}
           {typeof score === 'number' && (
@@ -171,19 +219,24 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
               <dd>{score.toFixed(2)} (heuristic score, not a probability)</dd>
             </>
           )}
-          <dt>Method version</dt>
-          <dd>{String(prop(ref.feature, 'method_version') ?? 'not provided')}</dd>
-          <dt>Source</dt>
-          <dd>
-            {typeof srcId === 'string' ? (
-              <button type="button" className="link" onClick={() => onSelect({ kind: 'source', id: srcId })}>
-                {srcId}
-              </button>
-            ) : (
-              'not provided'
-            )}
-          </dd>
         </dl>
+        <details className="more">
+          <summary>IDs and method</summary>
+          <dl className="kv small">
+            <dt>Feature ID</dt>
+            <dd>{ref.id}</dd>
+            <dt>Layer</dt>
+            <dd>{ref.layer}</dd>
+            {ref.layer === 'roads' && (
+              <>
+                <dt>candidate_blocked</dt>
+                <dd>{String(prop(ref.feature, 'candidate_blocked') ?? 'not provided')}</dd>
+              </>
+            )}
+            <dt>Method version</dt>
+            <dd>{String(prop(ref.feature, 'method_version') ?? 'not provided')}</dd>
+          </dl>
+        </details>
         {isFacility && (
           <>
             <h4>Nearest facility before the event for</h4>
@@ -271,8 +324,8 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
             })}
           </section>
         )}
-        <section aria-label="Timestamps" className="timestamps">
-          <h3>Timestamps</h3>
+        <details className="more timestamps">
+          <summary>Timestamps and delivery</summary>
           <dl className="kv">
             <dt>Event date</dt>
             <dd>{a.event_date}</dd>
@@ -283,7 +336,7 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
               {formatTime(loaded.received_at)} ({CHANNEL_LABEL[loaded.channel]})
             </dd>
           </dl>
-        </section>
+        </details>
         {onOpenBrief && (
           <button type="button" className="primary full" onClick={onOpenBrief}>
             Open cited brief

@@ -4,7 +4,7 @@
 // when opened; a mismatch is refused, never silently used. Mission simulation
 // state lives in a separate store so it can never overwrite the assessment.
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { ApiError, type ApiClient, type Received } from '../api/client';
+import { ApiError, checkReportScope, type ApiClient, type Received } from '../api/client';
 import {
   GroundedReportSchema,
   ReportSchema,
@@ -168,19 +168,60 @@ interface Collected {
 
 // Download and verify everything in memory first. Only a complete, verified
 // set reaches storage, in one transaction.
-async function collectFromBackend(loaded: LoadedAssessment, client: ApiClient): Promise<Collected> {
+const docLanguage = (id: DocId): 'en' | 'ne' => (id.endsWith('-ne') ? 'ne' : 'en');
+
+// Parse and scope-check a cached document. Used before the save transaction and
+// again on every open, so a wrong-assessment/mode/language or malformed document
+// can never be stored or displayed from a package.
+function validateDoc(doc_id: DocId, bytes: ArrayBuffer, scope: { assessment_id: string; mode: string }): GroundedReport | Report | null {
+  const text = decoder.decode(bytes);
+  if (doc_id.startsWith('brief-html')) {
+    if (!/<html|<!doctype html/i.test(text)) throw new PackageIntegrityError(`${doc_id} is not an HTML document.`);
+    return null;
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new PackageIntegrityError(`${doc_id} is not valid JSON.`);
+  }
+  const schema = doc_id.startsWith('brief-') ? GroundedReportSchema : ReportSchema;
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) throw new PackageIntegrityError(`${doc_id} does not match its contract.`);
+  try {
+    checkReportScope(parsed.data, { assessment_id: scope.assessment_id, mode: scope.mode as never, language: docLanguage(doc_id) }, doc_id);
+  } catch (err) {
+    throw new PackageIntegrityError((err as Error).message);
+  }
+  return parsed.data;
+}
+
+async function collectFromBackend(loaded: LoadedAssessment, client: ApiClient, signal?: AbortSignal): Promise<Collected> {
   const id = loaded.assessment.assessment_id;
-  const pkg = await client.getPackage(id);
+  const pkg = await client.getPackage(id, signal);
   const now = () => new Date().toISOString();
 
-  const snap = await client.bytes(pkg.assessment_uri);
+  const snap = await client.bytes(pkg.assessment_uri, signal);
   const snapHash = await sha256Bytes(snap.bytes);
   if (snapHash !== pkg.assessment_sha256) {
     throw new PackageIntegrityError(`Assessment snapshot failed its SHA-256 check (expected ${pkg.assessment_sha256.slice(0, 12)}…, got ${snapHash.slice(0, 12)}…). Nothing was saved.`);
   }
-  const parsed = parseAssessment(JSON.parse(decoder.decode(snap.bytes)));
+  let snapValue: unknown;
+  try {
+    snapValue = JSON.parse(decoder.decode(snap.bytes));
+  } catch {
+    throw new PackageIntegrityError('Backend snapshot is not valid JSON. Nothing was saved.');
+  }
+  const parsed = parseAssessment(snapValue);
   if (!parsed.ok) throw new PackageIntegrityError('Backend snapshot does not validate against contract v1. Nothing was saved.');
-  if (parsed.assessment.assessment_id !== id) throw new PackageIntegrityError('Backend snapshot names a different assessment. Nothing was saved.');
+  const a = parsed.assessment;
+  if (a.assessment_id !== id || pkg.assessment_id !== id) throw new PackageIntegrityError('Backend snapshot names a different assessment. Nothing was saved.');
+  if (pkg.mode !== a.mode || a.mode !== loaded.assessment.mode) {
+    throw new PackageIntegrityError(`Package mode ${pkg.mode} disagrees with the snapshot (${a.mode}) or the loaded assessment (${loaded.assessment.mode}). Nothing was saved.`);
+  }
+  if (pkg.schema_version !== a.schema_version) throw new PackageIntegrityError('Package schema version disagrees with the snapshot. Nothing was saved.');
+  const roles = pkg.assets.map((x) => x.role);
+  if (new Set(roles).size !== roles.length) throw new PackageIntegrityError(`Package lists duplicate image roles (${roles.join(', ')}). Nothing was saved.`);
 
   const pending: Pending[] = [
     {
@@ -191,7 +232,7 @@ async function collectFromBackend(loaded: LoadedAssessment, client: ApiClient): 
   for (const asset of pkg.assets) {
     const problem = checkAssetProvenance(parsed.assessment, asset);
     if (problem) throw new PackageIntegrityError(`${problem} Nothing was saved.`);
-    const got = await client.bytes(asset.uri);
+    const got = await client.bytes(asset.uri, signal);
     const digest = await sha256Bytes(got.bytes);
     if (digest !== asset.sha256) {
       throw new PackageIntegrityError(`${asset.role} image failed its SHA-256 check. Nothing was saved.`);
@@ -203,22 +244,11 @@ async function collectFromBackend(loaded: LoadedAssessment, client: ApiClient): 
   }
   const docs: DocStatus[] = [];
   for (const doc_id of Object.keys(DOC_PATHS) as DocId[]) {
+    let got: { bytes: ArrayBuffer };
     try {
-      const got = await client.bytes(DOC_PATHS[doc_id](id));
-      pending.push({
-        entry: {
-          asset_id: doc_id,
-          media_type: doc_id.startsWith('brief-html') ? 'text/html' : 'application/json',
-          sha256: await sha256Bytes(got.bytes),
-          bytes: got.bytes.byteLength,
-          hash_origin: 'browser',
-          source_uri: DOC_PATHS[doc_id](id),
-          received_at: now(),
-        },
-        bytes: got.bytes,
-      });
-      docs.push({ doc_id, status: 'cached', error_code: null, error_message: null });
+      got = await client.bytes(DOC_PATHS[doc_id](id), signal);
     } catch (err) {
+      if (err instanceof ApiError && err.kind === 'cancelled') throw err;
       // A documented "not ready" answer (e.g. reviewed Nepali 501) is recorded,
       // never stored as a successful asset. Transport failures abort the save.
       const documented =
@@ -227,18 +257,34 @@ async function collectFromBackend(loaded: LoadedAssessment, client: ApiClient): 
         err.code !== null &&
         err.status !== null &&
         (err.status === 501 || (err.status >= 400 && err.status < 500));
-      if (documented) {
-        docs.push({ doc_id, status: 'unavailable', error_code: (err as ApiError).code, error_message: (err as ApiError).message });
-      } else {
-        throw err instanceof ApiError
-          ? new PackageStorageError(`Download of ${doc_id} failed (${err.message}). Nothing was saved.`)
-          : err;
+      if (!documented) {
+        throw err instanceof ApiError ? new PackageStorageError(`Download of ${doc_id} failed (${err.message}). Nothing was saved.`) : err;
       }
+      docs.push({ doc_id, status: 'unavailable', error_code: (err as ApiError).code, error_message: (err as ApiError).message });
+      continue;
     }
+    try {
+      validateDoc(doc_id, got.bytes, { assessment_id: id, mode: a.mode });
+    } catch (err) {
+      throw new PackageIntegrityError(`${(err as Error).message} Nothing was saved.`);
+    }
+    pending.push({
+      entry: {
+        asset_id: doc_id,
+        media_type: doc_id.startsWith('brief-html') ? 'text/html' : 'application/json',
+        sha256: await sha256Bytes(got.bytes),
+        bytes: got.bytes.byteLength,
+        hash_origin: 'browser',
+        source_uri: DOC_PATHS[doc_id](id),
+        received_at: now(),
+      },
+      bytes: got.bytes,
+    });
+    docs.push({ doc_id, status: 'cached', error_code: null, error_message: null });
   }
   return {
     origin: 'backend_package' as const,
-    assessment: parsed.assessment,
+    assessment: a,
     attributions: pkg.attribution,
     limits: pkg.limitations,
     pending,
@@ -265,12 +311,12 @@ function collectBrowserSnapshot(loaded: LoadedAssessment) {
   };
 }
 
-export async function createPackage(loaded: LoadedAssessment, client: ApiClient | null): Promise<PackageManifest> {
+export async function createPackage(loaded: LoadedAssessment, client: ApiClient | null, signal?: AbortSignal): Promise<PackageManifest> {
   const created_at = new Date().toISOString();
   const package_id = `pkg-${loaded.assessment.assessment_id}-${crypto.randomUUID()}`;
   let collected: Collected;
   if (loaded.channel === 'api' && client) {
-    collected = await collectFromBackend(loaded, client);
+    collected = await collectFromBackend(loaded, client, signal);
   } else {
     const snap = collectBrowserSnapshot(loaded);
     snap.pending.push({
@@ -306,6 +352,7 @@ export async function createPackage(loaded: LoadedAssessment, client: ApiClient 
       ...collected.limits,
     ],
   };
+  if (signal?.aborted) throw new ApiError('cancelled', 'Package save cancelled. Nothing was saved.');
   await writePackage(manifest, collected.pending);
   return manifest;
 }
@@ -356,30 +403,41 @@ export async function lastPackageId(): Promise<string | null> {
 }
 
 // browser-package-1 stored UTF-8 text; its SHA-256 is over exactly those bytes,
-// so converting to byte rows keeps every hash. Verified before rewriting.
-async function migrateLegacy(m: LegacyManifest): Promise<PackageManifest> {
+// so converting to byte rows keeps every hash. Conversion happens in memory and
+// the result must pass the full open verification before anything is rewritten;
+// a malformed legacy package is left exactly as it was.
+async function convertLegacy(m: LegacyManifest): Promise<{ manifest: PackageManifest; pending: Pending[] }> {
   const d = await db();
   const pending: Pending[] = [];
+  const untouched = 'The older package was left untouched.';
   for (const asset of m.assets) {
     const row = await d.get('assets', `${m.package_id}/${asset.asset_id}`);
-    if (!row || typeof row.text !== 'string') throw new PackageIntegrityError(`Legacy package asset ${asset.asset_id} is missing; it was not migrated or opened.`);
+    if (!row || typeof row.text !== 'string') throw new PackageIntegrityError(`Older-format package asset ${asset.asset_id} is missing or malformed. ${untouched}`);
     const bytes = toArrayBuffer(encoder.encode(row.text));
     if ((await sha256Bytes(bytes)) !== asset.sha256) {
-      throw new PackageIntegrityError(`Legacy package asset ${asset.asset_id} failed its SHA-256 check; it was not migrated or opened.`);
+      throw new PackageIntegrityError(`Older-format package asset ${asset.asset_id} failed its SHA-256 check. ${untouched}`);
     }
     // v1 stored reports as Received<Report> wrappers; unwrap to report bytes.
     let out = bytes;
     let receivedAt = m.assessment_received_at;
-    let docId = asset.asset_id;
     if (asset.asset_id.startsWith('report-')) {
-      const wrapped = JSON.parse(row.text) as Received<unknown>;
+      let wrapped: Received<unknown>;
+      try {
+        wrapped = JSON.parse(row.text) as Received<unknown>;
+      } catch {
+        throw new PackageIntegrityError(`Older-format package report ${asset.asset_id} is not valid JSON. ${untouched}`);
+      }
+      if (!wrapped || typeof wrapped !== 'object' || typeof wrapped.received_at !== 'string' || !('value' in wrapped)) {
+        throw new PackageIntegrityError(`Older-format package report ${asset.asset_id} is malformed. ${untouched}`);
+      }
       out = toArrayBuffer(encoder.encode(JSON.stringify(wrapped.value)));
       receivedAt = wrapped.received_at;
-      docId = asset.asset_id;
+    } else if (asset.asset_id !== 'assessment') {
+      throw new PackageIntegrityError(`Older-format package has an unexpected asset ${asset.asset_id}. ${untouched}`);
     }
     pending.push({
       entry: {
-        asset_id: docId,
+        asset_id: asset.asset_id,
         media_type: asset.media_type,
         sha256: await sha256Bytes(out),
         bytes: out.byteLength,
@@ -390,7 +448,7 @@ async function migrateLegacy(m: LegacyManifest): Promise<PackageManifest> {
       bytes: out,
     });
   }
-  const migrated: PackageManifest = {
+  const manifest: PackageManifest = {
     manifest_version: MANIFEST_VERSION,
     package_id: m.package_id,
     created_at: m.created_at,
@@ -418,71 +476,109 @@ async function migrateLegacy(m: LegacyManifest): Promise<PackageManifest> {
     ],
     limits: ['Migrated from browser-package-1: no radar previews or briefs were saved.', ...m.limits],
   };
-  await writePackage(migrated, pending);
-  return migrated;
+  return { manifest, pending };
 }
 
 function docError(st: DocStatus | undefined, fallback: string) {
   return new ApiError('http', st?.error_message ?? fallback, null, st?.error_code ?? 'not_cached');
 }
 
-export async function openPackage(package_id: string): Promise<StoredPackage> {
-  const d = await db();
-  let manifest = await d.get('manifests', package_id);
-  if (!manifest) throw new PackageIntegrityError(`Package ${package_id} is not in this browser.`);
-  if (manifest.manifest_version === LEGACY_MANIFEST_VERSION) manifest = await migrateLegacy(manifest);
-  if (manifest.manifest_version !== MANIFEST_VERSION) {
-    throw new PackageIntegrityError(`Unsupported package manifest ${(manifest as { manifest_version?: string }).manifest_version}. It was left untouched.`);
-  }
-  const m = manifest;
-  const bytes: Record<string, ArrayBuffer> = {};
-  for (const asset of m.assets) {
-    const row = await d.get('assets', `${package_id}/${asset.asset_id}`);
-    if (!row?.bytes) throw new PackageIntegrityError(`Asset ${asset.asset_id} is missing from package ${package_id}.`);
-    const digest = await sha256Bytes(row.bytes);
-    if (digest !== asset.sha256) {
-      throw new PackageIntegrityError(
-        `Asset ${asset.asset_id} failed its SHA-256 check (expected ${asset.sha256.slice(0, 12)}…, got ${digest.slice(0, 12)}…). The package was not opened.`,
-      );
-    }
-    bytes[asset.asset_id] = row.bytes;
-  }
-  const parsed = parseAssessment(JSON.parse(decoder.decode(bytes.assessment)));
-  if (!parsed.ok) throw new PackageIntegrityError('Cached assessment no longer validates against contract v1.');
+const RASTER_ROLES = new Set(['before_radar', 'after_radar']);
 
+// Every check that decides whether a package may be shown. Throws on the first
+// inconsistency; a checksum detects changed bytes, it does not make a source
+// trustworthy, so scope/metadata are checked too.
+async function verifyPackage(m: PackageManifest, bytes: Record<string, ArrayBuffer>): Promise<StoredPackage> {
+  const refuse = (why: string) => new PackageIntegrityError(`${why} The package was not opened.`);
+  const ids = m.assets.map((x) => x.asset_id);
+  if (new Set(ids).size !== ids.length) throw refuse('Package lists duplicate assets.');
+  for (const asset of m.assets) {
+    const b = bytes[asset.asset_id];
+    if (!b) throw refuse(`Asset ${asset.asset_id} is missing from package ${m.package_id}.`);
+    if (b.byteLength !== asset.bytes) throw refuse(`Asset ${asset.asset_id} has ${b.byteLength} bytes; the manifest records ${asset.bytes}.`);
+    const digest = await sha256Bytes(b);
+    if (digest !== asset.sha256) {
+      throw refuse(`Asset ${asset.asset_id} failed its SHA-256 check (expected ${asset.sha256.slice(0, 12)}…, got ${digest.slice(0, 12)}…).`);
+    }
+  }
+  if (!bytes.assessment) throw refuse('Package has no assessment snapshot.');
+  let snapValue: unknown;
+  try {
+    snapValue = JSON.parse(decoder.decode(bytes.assessment));
+  } catch {
+    throw refuse('Cached assessment is not valid JSON.');
+  }
+  const parsed = parseAssessment(snapValue);
+  if (!parsed.ok) throw refuse('Cached assessment no longer validates against contract v1.');
+  const a = parsed.assessment;
+  if (a.assessment_id !== m.assessment_id || a.mode !== m.assessment_mode || a.schema_version !== m.schema_version) {
+    throw refuse('Manifest assessment ID, mode or schema disagrees with the cached snapshot.');
+  }
+  const rasters = m.assets.filter((x) => x.raster);
+  for (const x of rasters) {
+    const r = x.raster!;
+    if (!RASTER_ROLES.has(r.role) || r.role !== x.asset_id || x.media_type !== 'image/png') throw refuse(`Image asset ${x.asset_id} has inconsistent role or type.`);
+    const problem = checkAssetProvenance(a, r);
+    if (problem) throw refuse(problem);
+  }
+  const docs: Partial<Record<DocId, GroundedReport | Report | null>> = {};
+  for (const st of m.docs) {
+    const b = bytes[st.doc_id];
+    if (st.status === 'cached' && !b) throw refuse(`${st.doc_id} is marked cached but missing.`);
+    if (st.status !== 'cached' && b) throw refuse(`${st.doc_id} is stored but marked unavailable.`);
+    if (b) docs[st.doc_id] = validateDoc(st.doc_id, b, { assessment_id: a.assessment_id, mode: a.mode });
+  }
   const entry = (id: string) => m.assets.find((x) => x.asset_id === id);
   const status = (id: DocId) => m.docs.find((x) => x.doc_id === id);
-  const readDoc = <T,>(id: DocId, schema: { safeParse: (v: unknown) => { success: boolean; data?: T } }): CachedDoc<T> => {
-    const b = bytes[id];
-    if (!b) return { kind: 'error', error: docError(status(id), 'Not cached in this package.') };
-    const r = schema.safeParse(JSON.parse(decoder.decode(b)));
-    if (!r.success) return { kind: 'error', error: new ApiError('invalid_response', `Cached ${id} does not match its contract.`) };
-    return { kind: 'ok', received: { value: r.data as T, received_at: entry(id)!.received_at } };
-  };
+  const cached = <T,>(id: DocId): CachedDoc<T> =>
+    docs[id] ? { kind: 'ok', received: { value: docs[id] as T, received_at: entry(id)!.received_at } } : { kind: 'error', error: docError(status(id), 'Not cached in this package.') };
   const html = (id: DocId) => (bytes[id] ? new Blob([bytes[id]], { type: 'text/html' }) : null);
-
-  const rasters = m.assets.filter((x) => x.raster);
   const scenes: SceneBlob[] = rasters.map((x) => ({ asset: x.raster!, blob: new Blob([bytes[x.asset_id]], { type: x.media_type }) }));
-
-  await d.put('meta', { key: 'last_package_id', value: package_id });
   return {
     manifest: m,
     docs: {
-      report: { en: readDoc('report-en', ReportSchema), ne: readDoc('report-ne', ReportSchema) },
-      brief: { en: readDoc('brief-en', GroundedReportSchema), ne: readDoc('brief-ne', GroundedReportSchema) },
+      report: { en: cached<Report>('report-en'), ne: cached<Report>('report-ne') },
+      brief: { en: cached<GroundedReport>('brief-en'), ne: cached<GroundedReport>('brief-ne') },
       briefHtml: { en: html('brief-html-en'), ne: html('brief-html-ne') },
     },
     scenes: scenes.length
       ? { status: 'ready', scenes }
       : { status: 'none', reason: m.origin === 'backend_package' ? 'The backend package listed no radar preview.' : 'This package has no radar previews.' },
     loaded: {
-      assessment: parsed.assessment,
+      assessment: a,
       channel: 'offline_package',
       received_at: m.assessment_received_at,
-      package_id,
+      package_id: m.package_id,
       warnings: parsed.warnings,
     },
   };
+}
+
+export async function openPackage(package_id: string): Promise<StoredPackage> {
+  const d = await db();
+  const stored = await d.get('manifests', package_id);
+  if (!stored) throw new PackageIntegrityError(`Package ${package_id} is not in this browser.`);
+  let result: StoredPackage;
+  if (stored.manifest_version === LEGACY_MANIFEST_VERSION) {
+    const { manifest, pending } = await convertLegacy(stored);
+    try {
+      result = await verifyPackage(manifest, Object.fromEntries(pending.map((p) => [p.entry.asset_id, p.bytes])));
+    } catch (err) {
+      throw new PackageIntegrityError(`${(err as Error).message.replace(' The package was not opened.', '')} The older package was left untouched.`);
+    }
+    await writePackage(manifest, pending);
+  } else if (stored.manifest_version === MANIFEST_VERSION) {
+    const bytes: Record<string, ArrayBuffer> = {};
+    for (const asset of stored.assets) {
+      const row = await d.get('assets', `${package_id}/${asset.asset_id}`);
+      if (row?.bytes) bytes[asset.asset_id] = row.bytes;
+    }
+    result = await verifyPackage(stored, bytes);
+  } else {
+    throw new PackageIntegrityError(`Unsupported package manifest ${(stored as { manifest_version?: string }).manifest_version}. It was left untouched.`);
+  }
+  await d.put('meta', { key: 'last_package_id', value: package_id });
+  return result;
 }
 
 export async function deletePackage(package_id: string) {

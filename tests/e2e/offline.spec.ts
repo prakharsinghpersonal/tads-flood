@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openBundled } from './helpers';
+import { openBundled, openMission } from './helpers';
 
 test('O08: offline start without a package shows the missing-package screen', async ({ page, context }) => {
   await page.goto('/');
@@ -18,6 +18,7 @@ test('O01/O07/O02: cached package and mission survive an offline reload', async 
   await page.getByRole('tab', { name: 'Offline & mission' }).click();
   await page.getByRole('button', { name: 'Save current assessment as offline package' }).click();
   await expect(page.getByTestId('channel-badge')).toContainText('Cached offline package');
+  await openMission(page);
   await page.getByRole('button', { name: 'Start simulation' }).click();
   await page.getByRole('button', { name: 'Advance 5 steps' }).click();
   await page.getByRole('button', { name: 'Simulate radio loss' }).click();
@@ -38,6 +39,7 @@ test('O01/O07/O02: cached package and mission survive an offline reload', async 
   await expect(page.getByTestId('internet-badge')).toHaveText('Internet: offline');
   await expect(page.getByTestId('channel-badge')).toContainText('Cached offline package');
   await expect(page.getByTestId('map')).toHaveAttribute('data-ready', 'true');
+  await openMission(page);
   await expect(page.getByText('Mission state restored from this browser.')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Received simulated observations/ })).toHaveText(receivedBefore);
   await expect(page.getByTestId('link-badge')).toHaveText('Drone radio link: lost');
@@ -56,6 +58,7 @@ test('O04/O06 in the browser: reconnect after expiry needs review, events dedupl
   await openBundled(page);
   await page.getByRole('tab', { name: 'Offline & mission' }).click();
   await page.getByRole('button', { name: 'Save current assessment as offline package' }).click();
+  await openMission(page);
   await page.getByRole('button', { name: 'Start simulation' }).click();
   await page.getByRole('button', { name: 'Simulate radio loss' }).click();
   await page.getByLabel('Tile to inspect').selectOption('t4-4');

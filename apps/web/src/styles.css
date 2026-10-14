@@ -3,7 +3,10 @@
   --panel: #ffffff;
   --ink: #1a202c;
   --muted: #4a5568;
-  --line: #d2d8de;
+  --line: #e2e7eb;
+  --line-strong: #c8d0d7;
+  --soft: #f5f7f9;
+  --space: 0.75rem;
   --accent: #1f3b57;
   --focus: #2b6cb0;
   --ok: #276749;
@@ -35,7 +38,7 @@ code { font-size: 0.85em; overflow-wrap: anywhere; }
 .warn { color: var(--warn); }
 .break { overflow-wrap: anywhere; }
 
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 5px rgba(43, 108, 176, 0.18); }
 .skip-link { position: absolute; left: -999px; top: 0; background: #fff; padding: 0.5rem; z-index: 100; }
 .skip-link:focus { left: 0.5rem; }
 
@@ -43,7 +46,7 @@ button, select, input { font: inherit; }
 button {
   min-height: 44px;
   padding: 0.45rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: #fff;
   color: var(--ink);
   border-radius: 6px;
@@ -93,7 +96,7 @@ input[type='checkbox'], input[type='radio'] { width: 1.15rem; height: 1.15rem; m
 
 .workspace {
   flex: 1; min-height: 0; display: grid; position: relative;
-  grid-template-columns: minmax(320px, 400px) 1fr;
+  grid-template-columns: minmax(300px, 360px) 1fr;
   grid-template-areas: 'side map';
 }
 .map-area { grid-area: map; position: relative; min-height: 0; }
@@ -107,12 +110,13 @@ input[type='checkbox'], input[type='radio'] { width: 1.15rem; height: 1.15rem; m
 }
 
 .tabs { display: flex; border-bottom: 1px solid var(--line); }
-.tabs [role='tab'] { flex: 1; border: 0; border-radius: 0; border-bottom: 3px solid transparent; background: none; font-weight: 600; }
-.tabs [role='tab'][aria-selected='true'] { border-bottom-color: var(--accent); color: var(--accent); }
+.tabs [role='tab'] { flex: 1; border: 0; border-radius: 0; border-bottom: 3px solid transparent; background: none; font-weight: 600; color: var(--muted); }
+.tabs [role='tab'][aria-selected='true'] { border-bottom-color: var(--accent); color: var(--accent); background: var(--soft); }
 .tabpanel { overflow-y: auto; flex: 1; min-height: 0; }
 .tabpanel > .button-row { padding: 0.75rem 1rem 0; }
 
-.panel-section { padding: 0.85rem 1rem; border-bottom: 1px solid var(--line); }
+.panel-section { padding: var(--space) 1rem; border-bottom: 1px solid var(--line); }
+.panel-section > h2 { margin-bottom: 0.5rem; }
 fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 0.6rem; padding: 0.5rem 0.75rem; min-width: 0; }
 fieldset:disabled { opacity: 0.8; }
 .radio-row label { display: block; padding: 0.35rem 0; }
@@ -228,10 +232,46 @@ textarea { font: inherit; width: 100%; padding: 0.5rem; border: 1px solid #a0aec
 .decision h3 { margin-top: 0; font-size: 0.88rem; }
 .method-notes summary { font-size: 0.85rem; color: var(--warn); }
 button.full { width: 100%; margin-top: 0.8rem; }
+/* On-map radar control and legend */
+.map-overlay { position: absolute; z-index: 4; background: rgba(255, 255, 255, 0.96); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); }
+.radar-control { left: 0.75rem; top: 0.75rem; padding: 0.45rem 0.55rem; max-width: min(360px, calc(100% - 4.5rem)); }
+.radar-head { display: flex; gap: 0.5rem; align-items: baseline; margin-bottom: 0.3rem; }
+.radar-title { font-weight: 700; font-size: 0.85rem; }
+.radar-buttons { display: flex; margin: 0; }
+.radar-buttons button { min-height: 40px; padding: 0.25rem 0.6rem; font-size: 0.88rem; }
+.radar-date { display: block; font-size: 0.72rem; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend { margin: 0.35rem 0 0; font-size: 0.8rem; }
+.legend summary { min-height: 28px; font-weight: 600; font-size: 0.8rem; }
+.legend ul { list-style: none; padding: 0; margin: 0.3rem 0 0; }
+.legend li { display: flex; gap: 0.45rem; align-items: center; margin: 0.2rem 0; }
+.lg { display: inline-block; width: 1.4rem; height: 0.85rem; flex: none; border-radius: 2px; }
+.lg-radar { background: linear-gradient(90deg, #2d2d2d, #bdbdbd); }
+.lg-nodata { background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 8px 8px; border: 1px solid #bbb; }
+.lg-flood { background: rgba(43, 108, 176, 0.45); border: 1px solid #2b6cb0; }
+.lg-cut { background: repeating-linear-gradient(90deg, #c53030 0 5px, transparent 5px 8px); height: 0.3rem; }
+.lg-unknown { background: repeating-linear-gradient(90deg, #6b46c1 0 2px, transparent 2px 6px); height: 0.3rem; }
+.lg-facility { width: 0.85rem; border-radius: 50%; background: #1a365d; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #1a365d; }
+
+/* Readable edge chips with exact IDs */
+.chip-edge { display: inline-flex; flex-direction: column; align-items: flex-start; border-radius: 8px; font-family: inherit; text-align: left; padding: 0.3rem 0.6rem; }
+.chip-label { font-size: 0.85rem; }
+.chip-id { font-size: 0.72rem; color: var(--muted); }
+.chip-cut .chip-id { color: #9b2c2c; }
+details.more { margin: 0.6rem 0; border-top: 1px solid var(--line); padding-top: 0.4rem; }
+details.more > summary { font-size: 0.85rem; color: var(--muted); }
+
+/* Readable report */
+.report #report-print, .report .copilot { max-width: 68ch; }
+.claims { padding-left: 1.1rem; }
+.claims li { line-height: 1.5; }
+.mission-toggle > summary { font-weight: 700; padding: 0.4rem 0; }
+.state-pair { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.4rem 0; }
+
 .print-only { display: none; }
 
 /* Tablet and phone: map on top, panel below, inspector as a bottom sheet. */
 @media (max-width: 900px) {
+  .radar-control { left: 0.5rem; top: 0.5rem; max-width: calc(100% - 4rem); }
   .workspace { grid-template-columns: 1fr; grid-template-rows: 45vh auto; grid-template-areas: 'map' 'side'; overflow-y: auto; }
   .side { border-right: 0; border-top: 1px solid var(--line); }
   .tabpanel { overflow: visible; }
@@ -260,4 +300,5 @@ button.full { width: 100%; margin-top: 0.8rem; }
   .no-print { display: none !important; }
   .print-only { display: block; }
   button.cite { color: #000; text-decoration: none; }
+  .tag-draft { border: 2px solid #000; }
 }

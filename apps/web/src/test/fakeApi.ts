@@ -47,7 +47,7 @@ export async function packageManifest(overrides: { beforeSha?: string } = {}) {
   };
 }
 
-export type Reply = { status: number; body?: unknown; bytes?: Uint8Array; contentType?: string } | 'network-error';
+export type Reply = { status: number; body?: unknown; bytes?: Uint8Array; stream?: ReadableStream<Uint8Array>; contentType?: string } | 'network-error';
 export type Router = (url: string, init?: RequestInit) => Reply | undefined | Promise<Reply | undefined>;
 
 const err = (status: number, code: string, message: string) => ({ status, body: { error: { code, message, retryable: false } } });
@@ -78,7 +78,7 @@ export async function geographicApi(extra?: Router) {
     if (init?.signal?.aborted) throw new DOMException('aborted', 'AbortError');
     const r = (extra && (await extra(url, init))) ?? (await base(url, init))!;
     if (r === 'network-error') throw new TypeError('Failed to fetch');
-    const payload = r.bytes ?? (r.body === undefined ? '' : JSON.stringify(r.body));
+    const payload = r.stream ?? r.bytes ?? (r.body === undefined ? '' : JSON.stringify(r.body));
     return new Response(payload as BodyInit, { status: r.status, headers: { 'content-type': r.contentType ?? 'application/json' } });
   }) as unknown as typeof fetch;
   return { fetchImpl, calls, pkg };

@@ -20,6 +20,7 @@ import {
 
 interface Props {
   pkg: StoredPackage;
+  online: boolean;
   onOverlay: (o: MissionOverlayData | null) => void;
 }
 
@@ -35,7 +36,7 @@ function stepsBetween(a: string, b: string, stepSeconds: number) {
   return Math.round((Date.parse(b) - Date.parse(a)) / 1000 / stepSeconds);
 }
 
-export default function MissionPanel({ pkg, onOverlay }: Props) {
+export default function MissionPanel({ pkg, online, onOverlay }: Props) {
   const a = pkg.loaded.assessment;
   const [sim, setSim] = useState<SimState | null>(null);
   const [restored, setRestored] = useState<'loading' | 'restored' | 'none'>('loading');
@@ -166,6 +167,9 @@ export default function MissionPanel({ pkg, onOverlay }: Props) {
       </p>
 
       <div className="link-row">
+        <span className={`badge ${online ? 'badge-ok' : 'badge-off'}`} data-testid="mission-internet">
+          Internet: {online ? 'online' : 'offline'}
+        </span>
         <span className={`badge ${linkUp ? 'badge-ok' : 'badge-off'}`} data-testid="link-badge">
           Drone radio link: {linkUp ? 'connected' : 'lost'}
         </span>
@@ -196,7 +200,8 @@ export default function MissionPanel({ pkg, onOverlay }: Props) {
             <th scope="col">Tile</th>
             <th scope="col">Battery</th>
             <th scope="col">Status</th>
-            <th scope="col">As of</th>
+            <th scope="col">Observed</th>
+            <th scope="col">Received</th>
             <th scope="col">Scenario</th>
           </tr>
         </thead>
@@ -217,6 +222,7 @@ export default function MissionPanel({ pkg, onOverlay }: Props) {
                   {formatTime(t.telemetry_at)}
                   {behind > 0 && <span className="warn small"> · {behind} step(s) old</span>}
                 </td>
+                <td>{formatTime(t.received_at)}</td>
                 <td>
                   <label className="small">
                     <input type="checkbox" checked={!drone.gnss_ok} onChange={() => act((s) => setGnss(s, t.actor_id, !drone.gnss_ok))} /> GNSS loss

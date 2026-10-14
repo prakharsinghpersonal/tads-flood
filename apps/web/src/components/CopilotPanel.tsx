@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ApiError, type Received } from '../api/client';
 import type { GroundedReport } from '../api/contract';
 import { formatTime, type Selection } from '../domain/assessment';
@@ -32,8 +32,18 @@ export default function CopilotPanel({ assessmentId, ask, unavailable, onSelect 
   const seq = useRef(0);
   const abort = useRef<AbortController | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  // Leaving the panel or switching area (the panel is keyed by assessment)
+  // aborts the model request and invalidates any late response.
+  useEffect(
+    () => () => {
+      seq.current++;
+      abort.current?.abort();
+    },
+    [],
+  );
+
+  async function submit(e?: React.FormEvent) {
+    e?.preventDefault();
     const q = question.trim();
     if (q.length < 1 || q.length > 2000) {
       setFormError('Ask a question of 1–2000 characters.');
@@ -129,6 +139,11 @@ export default function CopilotPanel({ assessmentId, ask, unavailable, onSelect 
           <div className="error-box" role="alert">
             <strong>{state.title}</strong>
             <p>{state.detail}</p>
+            {ask && (
+              <button type="button" onClick={() => void submit()}>
+                Try again
+              </button>
+            )}
           </div>
         )}
         {state.kind === 'answer' && <Answer question={state.question} received={state.received} onSelect={onSelect} />}

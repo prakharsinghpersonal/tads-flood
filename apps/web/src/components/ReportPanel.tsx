@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Received } from '../api/client';
 import type { GroundedReport, Report } from '../api/contract';
 import { CHANNEL_LABEL, MODE_LABEL, formatTime, type LoadedAssessment, type Selection } from '../domain/assessment';
@@ -68,9 +68,23 @@ function download(name: string, blob: Blob) {
 export default function ReportPanel({ loaded, source, onSelect }: Props) {
   const [lang, setLang] = useState<Lang>('en');
   const a = loaded.assessment;
-  const brief = useLoad<GroundedReport>(source ? (s) => source.brief(lang, s) : null, [source, lang]);
+  const [attempt, setAttempt] = useState(0);
+  const brief = useLoad<GroundedReport>(source ? (s) => source.brief(lang, s) : null, [source, lang, attempt]);
   const reviewed = useLoad<Report>(source ? (s) => source.reviewed(lang, s) : null, [source, lang]);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const exportCtl = useRef<AbortController | null>(null);
+
+  // An export started for one area/language is abandoned when either changes or
+  // the panel unmounts, so it can never be saved under the new area's name.
+  useEffect(() => {
+    setDownloadError(null);
+    return () => {
+      exportCtl.current?.abort();
+      exportCtl.current = null;
+      setExporting(false);
+    };
+  }, [a.assessment_id, lang, source]);
 
   if (!source) {
     return (
@@ -85,10 +99,23 @@ export default function ReportPanel({ loaded, source, onSelect }: Props) {
 
   async function saveHtml() {
     setDownloadError(null);
+    exportCtl.current?.abort();
+    const ctl = new AbortController();
+    exportCtl.current = ctl;
+    const forId = a.assessment_id;
+    const forLang = lang;
+    setExporting(true);
     try {
-      download(`${a.assessment_id}-${lang}-brief.html`, await source!.briefHtml(lang, new AbortController().signal));
+      const blob = await source!.briefHtml(forLang, ctl.signal);
+      if (ctl.signal.aborted || exportCtl.current !== ctl) return;
+      download(`${forId}-${forLang}-brief.html`, blob);
     } catch (err) {
-      setDownloadError(describeError(err).detail);
+      if (!ctl.signal.aborted) setDownloadError(describeError(err).detail);
+    } finally {
+      if (exportCtl.current === ctl) {
+        exportCtl.current = null;
+        setExporting(false);
+      }
     }
   }
 
@@ -109,9 +136,14 @@ export default function ReportPanel({ loaded, source, onSelect }: Props) {
         <div className="error-box" role="alert">
           <strong>{brief.code === 'no_report_source' ? 'No backend brief in this package' : `Brief unavailable: ${brief.title}`}</strong>
           <p>{brief.detail}</p>
+          {brief.code !== 'no_report_source' && (
+            <button type="button" onClick={() => setAttempt((n) => n + 1)}>
+              Retry
+            </button>
+          )}
         </div>
       )}
-      {brief.kind === 'ready' && <BriefBody received={brief.value} loaded={loaded} onSelect={onSelect} />}
+      {brief.kind === 'ready' && <BriefBody received={brief.value} loaded={loaded} lang={lang} onSelect={onSelect} />}
 
       <p className="small reviewed-status" data-testid="reviewed-status">
         Reviewed {lang === 'ne' ? 'Nepali' : 'English'} report:{' '}
@@ -124,14 +156,19 @@ export default function ReportPanel({ loaded, source, onSelect }: Props) {
               : `unavailable (${reviewed.code ?? reviewed.title})`}
       </p>
 
-      {brief.kind === 'ready' && (
+      {brief.kind === 'ready' && inScope(brief.value.value, a, lang) && (
         <div className="button-row no-print">
           <button type="button" onClick={() => window.print()}>
             Print brief
           </button>
-          <button type="button" onClick={() => void saveHtml()}>
-            Download brief (HTML)
+          <button type="button" onClick={() => void saveHtml()} disabled={exporting}>
+            {exporting ? 'Preparing HTML…' : 'Download brief (HTML)'}
           </button>
+          {exporting && (
+            <button type="button" onClick={() => exportCtl.current?.abort()}>
+              Cancel download
+            </button>
+          )}
           <button
             type="button"
             onClick={() => download(`${a.assessment_id}-${lang}-brief.json`, new Blob([JSON.stringify(brief.value.value, null, 2)], { type: 'application/json' }))}
@@ -151,15 +188,18 @@ export default function ReportPanel({ loaded, source, onSelect }: Props) {
   );
 }
 
-function BriefBody({ received, loaded, onSelect }: { received: Received<GroundedReport>; loaded: LoadedAssessment; onSelect: (s: Selection) => void }) {
+function inScope(r: { assessment_id: string; mode: string; language: string }, a: LoadedAssessment['assessment'], lang: Lang) {
+  return r.assessment_id === a.assessment_id && r.mode === a.mode && r.language === lang;
+}
+
+function BriefBody({ received, loaded, lang, onSelect }: { received: Received<GroundedReport>; loaded: LoadedAssessment; lang: Lang; onSelect: (s: Selection) => void }) {
   const r = received.value;
   const a = loaded.assessment;
   const gen = generatorLabel(r);
-  const mismatch = r.assessment_id !== a.assessment_id || r.mode !== a.mode;
-  if (mismatch) {
+  if (!inScope(r, a, lang)) {
     return (
       <p className="error-box" role="alert">
-        Brief belongs to {r.assessment_id} ({r.mode}) but the workspace shows {a.assessment_id} ({a.mode}). Not shown.
+        Brief belongs to {r.assessment_id} ({r.mode}, {r.language}) but the workspace shows {a.assessment_id} ({a.mode}, {lang}). Not shown.
       </p>
     );
   }

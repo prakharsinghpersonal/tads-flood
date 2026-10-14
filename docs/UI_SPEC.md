@@ -5,7 +5,7 @@ not plans; planned items are marked.
 
 ## Layout
 
-Map-first workspace. Desktop (>900 px): side panel (320–400 px) left, map fills
+Map-first workspace. Desktop (>900 px): side panel (300–360 px) left, map fills
 the rest, evidence inspector floats over the right of the map and the map refits
 the selected route into the visible area. ≤900 px: map (45 vh) above the panel;
 inspector is a bottom sheet (≤70 vh). ≤420 px: single-column forms and key/value
@@ -147,3 +147,41 @@ namespace. The assessment object is never modified (tested with a deep-frozen co
 Skip link; native buttons/inputs (44 px targets); tablist with arrow keys;
 focus moved to the inspector heading on open; Esc closes; evidence is never
 hover-only; reduced-motion disables animation and map fly-to easing.
+
+## Checkpoint 3 changes (reliability and focus)
+
+- **Request boundary.** API byte fetches go only to `/api/v1/...` paths that the
+  URL parser leaves unchanged. Each decoded segment is checked: dot segments,
+  backslashes and control characters are refused, as are malformed escapes,
+  `?`/`#` misuse and odd query characters. Encoded `/` inside a source ID
+  stays valid.
+- **Deadlines and cancel.** One deadline and one cancel cover headers *and* body:
+  20 s generally, 90 s for copilot calls (cold local models). A stalled or
+  interrupted body ends with a readable error. Timers and listeners are always
+  released.
+- **Scope.** Briefs, reports and copilot answers must match the requested
+  assessment ID, mode and language. The client, the package save and the
+  package open all enforce this, and so does every export. Leaving the report
+  or copilot, or switching area or language, aborts pending requests and HTML
+  exports. A late result is discarded, never shown or downloaded under the
+  new ID. Package saves can be cancelled; nothing is stored.
+- **Packages.** All JSON documents are validated before the single transaction.
+  So are manifest/snapshot ID, mode and schema, and image roles must be unique.
+  Reopening re-checks sizes, hashes, image provenance and document scope, and
+  that cached/unavailable flags agree. Older v1 packages are converted and
+  fully verified in memory first; a malformed one is left byte-for-byte untouched.
+- **Layout.** The settlement access list comes first, with readable cut names
+  ("Bridge · 240 m, 229 m exposed") and exact IDs beside them. "Connected" is
+  now *Mapped route remains*, explicitly "not a safety rating". There is a
+  no-facility notice, and method notes are collapsed.
+- **Radar control on the map.** Before/After/Hide with both dates. "Hidden"
+  and "unavailable" are worded differently. The legend covers grey radar,
+  transparent no-data, flood, cuts, unknown roads and facilities. The map fit
+  leaves space under the control.
+- **Inspector.** Leads with status, consequence, then source and acquisition
+  date. Exact IDs, method and timestamps sit under expandable details.
+- **Report.** Readable width; retry for failed briefs and copilot errors; the
+  HTML export can be cancelled. The DRAFT badge persists in print.
+- **Simulation.** Collapsed under "Simulated inspection (optional)" and off the
+  map until opened. Internet and radio badges sit side by side. Telemetry shows
+  observed time and received time.

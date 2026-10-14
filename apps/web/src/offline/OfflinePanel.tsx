@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../api/client';
 import { MODE_LABEL, ageLabel, formatTime, shortHash, type LoadedAssessment } from '../domain/assessment';
 import type { MissionOverlayData } from '../map/MapView';
@@ -19,6 +19,9 @@ export default function OfflinePanel({ client, online, loaded, activePackage, on
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const saveCtl = useRef<AbortController | null>(null);
+  const [missionOpen, setMissionOpen] = useState(false);
+  useEffect(() => () => saveCtl.current?.abort(), []);
 
   const refresh = useCallback(async () => {
     try {
@@ -36,14 +39,18 @@ export default function OfflinePanel({ client, online, loaded, activePackage, on
     if (!loaded) return;
     setBusy(true);
     setError(null);
+    const ctl = new AbortController();
+    saveCtl.current = ctl;
     try {
-      const m = await createPackage(loaded, online ? client : null);
+      const m = await createPackage(loaded, online ? client : null, ctl.signal);
       await refresh();
       const pkg = await openPackage(m.package_id);
       onOpenPackage(pkg.loaded, pkg);
     } catch (err) {
-      setError(`Could not save package: ${(err as Error).message}`);
+      if (ctl.signal.aborted) setError('Save cancelled. Nothing was saved.');
+      else setError(`Could not save package: ${(err as Error).message}`);
     } finally {
+      if (saveCtl.current === ctl) saveCtl.current = null;
       setBusy(false);
     }
   }
@@ -77,9 +84,16 @@ export default function OfflinePanel({ client, online, loaded, activePackage, on
           A package stores the received assessment, its backend reports and a hashed manifest in this browser (IndexedDB). Cached viewing needs no network and shows no fresh satellite data.
         </p>
         {canSave && (
-          <button type="button" className="primary" onClick={() => void save()} disabled={busy}>
-            Save current assessment as offline package
-          </button>
+          <div className="button-row">
+            <button type="button" className="primary" onClick={() => void save()} disabled={busy}>
+              {busy && saveCtl.current ? 'Saving and verifying…' : 'Save current assessment as offline package'}
+            </button>
+            {busy && saveCtl.current && (
+              <button type="button" onClick={() => saveCtl.current?.abort()}>
+                Cancel save
+              </button>
+            )}
+          </div>
         )}
         {error && (
           <p className="error-box" role="alert">
@@ -176,7 +190,21 @@ export default function OfflinePanel({ client, online, loaded, activePackage, on
         </ul>
       </section>
       {activePackage ? (
-        <MissionPanel key={activePackage.manifest.package_id} pkg={activePackage} onOverlay={onMissionOverlay} />
+        <section className="panel-section">
+          <details
+            className="mission-toggle"
+            open={missionOpen}
+            onToggle={(e) => {
+              const open = (e.currentTarget as HTMLDetailsElement).open;
+              setMissionOpen(open);
+              if (!open) onMissionOverlay(null);
+            }}
+          >
+            <summary>Simulated inspection (optional)</summary>
+            <p className="small muted">A separate planning simulation over this package. It never changes the assessment or brief.</p>
+            {missionOpen && <MissionPanel key={activePackage.manifest.package_id} pkg={activePackage} online={online} onOverlay={onMissionOverlay} />}
+          </details>
+        </section>
       ) : (
         <section className="panel-section">
           <h2>Simulated inspection</h2>

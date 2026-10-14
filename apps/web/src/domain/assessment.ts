@@ -1,14 +1,14 @@
 import type { Assessment, Evidence, LayerName, SettlementResult, SettlementStatus, Source } from '../api/contract';
 
 export const STATUS_LABEL: Record<SettlementStatus, string> = {
-  connected: 'Connected',
+  connected: 'Mapped route remains',
   potentially_isolated: 'Potentially isolated',
   preexisting_disconnected: 'Disconnected before event',
   unknown_network: 'Unknown network',
 };
 
 export const STATUS_EXPLAINER: Record<SettlementStatus, string> = {
-  connected: 'A route to a facility remains in the post-event graph.',
+  connected: 'A mapped route to a facility remains. Passability is not verified; this is not a safety rating.',
   potentially_isolated:
     'Inferred from candidate road exposure. Not a verified closure and not confirmed isolation.',
   preexisting_disconnected: 'No route existed before the event. This is not new flood impact.',
@@ -143,4 +143,23 @@ export function formatArea(m2: number | null): string {
 
 export function shortHash(h: string) {
   return `${h.slice(0, 8)}…${h.slice(-4)}`;
+}
+
+// Short human-readable label for a road edge; the exact edge ID stays visible
+// alongside it wherever the label is shown.
+export function edgeLabel(f: GeoFeature | undefined, id: string): string {
+  if (!f) return id;
+  const p = f.properties ?? {};
+  const bridge = p.bridge === 'yes' || p.bridge === true;
+  const highway = typeof p.highway === 'string' ? p.highway.replace(/_/g, ' ') : null;
+  const name = typeof p.name === 'string' && p.name ? p.name : null;
+  const kind = bridge ? 'Bridge' : highway ? `${highway[0].toUpperCase()}${highway.slice(1)} road` : 'Road segment';
+  const len = typeof p.length_m === 'number' ? `${Math.round(p.length_m)} m` : null;
+  const exposed = typeof p.exposed_length_m === 'number' && p.exposed_length_m > 0 ? `${Math.round(p.exposed_length_m)} m exposed` : null;
+  return [name ? `${kind} ${name}` : kind, [len, exposed].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+}
+
+export function featureLabel(f: GeoFeature | undefined, id: string): string {
+  const name = f?.properties?.name;
+  return typeof name === 'string' && name ? name : id;
 }
