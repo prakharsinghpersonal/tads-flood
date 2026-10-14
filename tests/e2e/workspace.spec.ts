@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openBundled } from './helpers';
 
 async function openFixture(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open bundled UI fixture (no API)' }).click();
+  await openBundled(page);
   await expect(page.getByTestId('map')).toHaveAttribute('data-ready', 'true');
 }
 
@@ -38,8 +39,10 @@ test('U04: API outage is shown, not replaced by fixture data', async ({ page }) 
 
 test('X01: essential flow by keyboard only', async ({ page }) => {
   await page.goto('/');
-  const fixtureButton = page.getByRole('button', { name: 'Open bundled UI fixture (no API)' });
-  await fixtureButton.focus();
+  const more = page.getByText('Other test data');
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Open bundled UI fixture (no API)' }).focus();
   await page.keyboard.press('Enter');
   await page.getByTestId('settlement-training-settlement-b').focus();
   await page.keyboard.press('Space');

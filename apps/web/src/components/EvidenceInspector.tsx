@@ -23,6 +23,7 @@ interface Props {
   onToggleReviewed: (key: string) => void;
   onSelect: (sel: Selection) => void;
   onClose: () => void;
+  onOpenBrief?: () => void;
 }
 
 const KIND_LABEL: Record<Evidence['kind'], string> = {
@@ -35,7 +36,7 @@ function selectionKey(sel: Selection) {
   return sel.kind === 'feature' ? `feature:${sel.id}` : `${sel.kind}:${sel.id}`;
 }
 
-export default function EvidenceInspector({ loaded, selection, reviewed, onToggleReviewed, onSelect, onClose }: Props) {
+export default function EvidenceInspector({ loaded, selection, reviewed, onToggleReviewed, onSelect, onClose, onOpenBrief }: Props) {
   const { assessment: a } = loaded;
   const heading = useRef<HTMLHeadingElement>(null);
   const evidence = useMemo(() => evidenceById(a), [a]);
@@ -83,7 +84,20 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
           <p className={`status status-${s.status}`} data-testid="inspector-status">
             <strong>{STATUS_LABEL[s.status]}</strong> — {STATUS_EXPLAINER[s.status]}
           </p>
-          <p className="reason">{s.reason}</p>
+          <div className="decision" data-testid="decision">
+            <h3>What this means</h3>
+            <p>
+              {s.status === 'potentially_isolated' &&
+                `${s.candidate_cut_edge_ids.length ? `If ${s.candidate_cut_edge_ids.join(', ')} ${s.candidate_cut_edge_ids.length > 1 ? 'are' : 'is'} impassable, ` : ''}no mapped route to a facility remains. Check the cut edge's sources before acting.`}
+              {s.status === 'connected' &&
+                (s.candidate_cut_edge_ids.length
+                  ? `The usual route crosses ${s.candidate_cut_edge_ids.join(', ')}, but an alternate route to ${s.post_event_facility_id ?? 'a facility'} remains.`
+                  : `The usual route to ${s.post_event_facility_id ?? 'a facility'} has no candidate exposure.`)}
+              {s.status === 'preexisting_disconnected' && 'No mapped route existed before the event. This is a map gap or a pre-existing condition, not flood impact.'}
+              {s.status === 'unknown_network' && 'The settlement could not be placed on the road network. Road access is unknown; do not treat it as safe.'}
+            </p>
+            <p className="small muted">Backend reason: {s.reason}</p>
+          </div>
           <dl className="kv">
             <dt>Settlement ID</dt>
             <dd>{s.settlement_id}</dd>
@@ -120,6 +134,9 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
     const usedBy = a.settlements.filter(
       (s) => s.baseline_route_edge_ids.includes(selection.id) || s.post_event_route_edge_ids.includes(selection.id),
     );
+    const isFacility = prop(ref?.feature, 'kind') === 'facility' || typeof prop(ref?.feature, 'amenity') === 'string';
+    const servedBaseline = a.settlements.filter((s) => s.baseline_facility_id === selection.id);
+    const servedPost = a.settlements.filter((s) => s.post_event_facility_id === selection.id);
     body = ref ? (
       <>
         <dl className="kv">
@@ -127,8 +144,19 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
           <dd>{ref.layer}</dd>
           <dt>Feature ID</dt>
           <dd>{ref.id}</dd>
-          <dt>Status</dt>
-          <dd data-testid="inspector-status">{typeof status === 'string' ? status.replace(/_/g, ' ') : 'not provided'}</dd>
+          {isFacility ? (
+            <>
+              <dt>Facility</dt>
+              <dd data-testid="inspector-status">{String(prop(ref.feature, 'amenity') ?? 'facility')} (from pre-event map data)</dd>
+            </>
+          ) : (
+            <>
+              <dt>Status</dt>
+              <dd data-testid="inspector-status">
+                {status === 'unknown' ? 'unknown coverage — not known to be passable or blocked' : typeof status === 'string' ? status.replace(/_/g, ' ') : 'not provided'}
+              </dd>
+            </>
+          )}
           {ref.layer === 'roads' && (
             <>
               <dt>Candidate blocked</dt>
@@ -156,6 +184,38 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
             )}
           </dd>
         </dl>
+        {isFacility && (
+          <>
+            <h4>Nearest facility before the event for</h4>
+            {servedBaseline.length ? (
+              <ul className="chips">
+                {servedBaseline.map((s) => (
+                  <li key={s.settlement_id}>
+                    <button type="button" className="chip" onClick={() => onSelect({ kind: 'settlement', id: s.settlement_id })}>
+                      {settlementName(a, s)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">No settlement.</p>
+            )}
+            <h4>Still reachable after the event from</h4>
+            {servedPost.length ? (
+              <ul className="chips">
+                {servedPost.map((s) => (
+                  <li key={s.settlement_id}>
+                    <button type="button" className="chip" onClick={() => onSelect({ kind: 'settlement', id: s.settlement_id })}>
+                      {settlementName(a, s)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">No settlement has a post-event route to it.</p>
+            )}
+          </>
+        )}
         {usedBy.length > 0 && (
           <>
             <h4>Used by settlement routes</h4>
@@ -224,6 +284,11 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
             </dd>
           </dl>
         </section>
+        {onOpenBrief && (
+          <button type="button" className="primary full" onClick={onOpenBrief}>
+            Open cited brief
+          </button>
+        )}
         <label className="review">
           <input type="checkbox" checked={reviewed.has(key)} onChange={() => onToggleReviewed(key)} />
           Flag as reviewed by me. Reviewing does not change the status or mark anything safe.

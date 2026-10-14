@@ -5,15 +5,15 @@ import {
   STATUS_LABEL,
   STATUS_ORDER,
   formatArea,
-  formatTime,
-  imagerySources,
   indexFeatures,
   prop,
   settlementName,
   type LoadedAssessment,
   type Selection,
 } from '../domain/assessment';
+import type { SceneLoad } from '../domain/scenes';
 import type { ToggleLayer } from '../map/MapView';
+import SceneCompare, { type RadarView } from './SceneCompare';
 
 interface Props {
   loaded: LoadedAssessment;
@@ -21,8 +21,11 @@ interface Props {
   visible: Record<ToggleLayer, boolean>;
   onToggle: (layer: ToggleLayer) => void;
   onSelect: (sel: Selection) => void;
-  imageryView: 'before' | 'after';
-  onImageryView: (v: 'before' | 'after') => void;
+  scenes: SceneLoad;
+  radarView: RadarView;
+  radarOpacity: number;
+  onRadarView: (v: RadarView) => void;
+  onRadarOpacity: (v: number) => void;
 }
 
 const TOGGLES: Array<[ToggleLayer, string, string]> = [
@@ -34,17 +37,17 @@ const TOGGLES: Array<[ToggleLayer, string, string]> = [
   ['uncertainty', 'Uncertainty / no data', 'swatch-unknown'],
 ];
 
-export default function AssessmentPanel({ loaded, selection, visible, onToggle, onSelect, imageryView, onImageryView }: Props) {
+export default function AssessmentPanel({ loaded, selection, visible, onToggle, onSelect, scenes, radarView, radarOpacity, onRadarView, onRadarOpacity }: Props) {
   const a = loaded.assessment;
   const features = useMemo(() => indexFeatures(a), [a]);
-  const { before, after } = imagerySources(a);
+  const facilities = [...features.values()].filter((f) => f.layer === 'settlements' && prop(f.feature, 'kind') === 'facility');
   const grouped = STATUS_ORDER.map((status) => ({
     status,
     items: a.settlements.filter((s) => s.status === status),
   })).filter((g) => g.items.length > 0);
   const exposed = [...features.values()].filter((f) => {
     const st = prop(f.feature, 'status');
-    return (f.layer === 'buildings' || f.layer === 'roads') && (st === 'exposed' || st === 'candidate_blocked');
+    return (f.layer === 'buildings' || f.layer === 'roads') && (st === 'exposed' || st === 'candidate_blocked' || st === 'unknown');
   });
   const selectedId = selection && selection.kind !== 'evidence' && selection.kind !== 'source' ? selection.id : null;
 
@@ -74,41 +77,34 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
           </div>
         </dl>
         <p className={`quality quality-${a.quality.status}`}>
-          Coverage quality: <strong>{a.quality.status}</strong>, valid fraction {(a.quality.valid_fraction * 100).toFixed(0)}%. Missing coverage is unknown, not unaffected.
+          Data coverage: <strong>{(a.quality.valid_fraction * 100).toFixed(0)}%</strong> of the area ({a.quality.status}). Anything outside coverage is unknown, not unaffected.
         </p>
-        {[...a.quality.warnings, ...loaded.warnings].map((w) => (
-          <p key={w} className="warn small">
+        {loaded.warnings.map((w) => (
+          <p key={w} className="warn small" role="note">
             {w}
           </p>
         ))}
+        {a.quality.warnings.length > 0 && (
+          <details className="method-notes">
+            <summary>Method notes ({a.quality.warnings.length})</summary>
+            <ul className="small">
+              {a.quality.warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </details>
+        )}
       </section>
 
-      <section aria-labelledby="imagery-title" className="panel-section">
-        <h2 id="imagery-title">Before / after imagery</h2>
-        <div className="segmented" role="group" aria-label="Imagery comparison">
-          {(['before', 'after'] as const).map((v) => (
-            <button key={v} type="button" aria-pressed={imageryView === v} onClick={() => onImageryView(v)}>
-              {v === 'before' ? 'Before event' : 'After event'}
-            </button>
-          ))}
-        </div>
-        <ul className="scene-list" data-testid="imagery-scenes">
-          {(imageryView === 'before' ? before : after).map((s) => (
-            <li key={s.source_id}>
-              <button type="button" className="link" onClick={() => onSelect({ kind: 'source', id: s.source_id })}>
-                {s.source_id}
-              </button>{' '}
-              <span className="small">
-                {s.kind.replace('_', '-')} acquired {formatTime(s.acquired_at)}
-              </span>
-            </li>
-          ))}
-          {(imageryView === 'before' ? before : after).length === 0 && <li className="muted">No {imageryView}-event scene listed in sources.</li>}
-        </ul>
-        <p className="small muted">
-          Raster previews are not part of contract v1, so no imagery is drawn. Scene IDs and acquisition times come from the assessment sources.
-        </p>
-      </section>
+      <SceneCompare
+        assessment={a}
+        load={scenes}
+        view={radarView}
+        opacity={radarOpacity}
+        onView={onRadarView}
+        onOpacity={onRadarOpacity}
+        onSelect={onSelect}
+      />
 
       <section aria-labelledby="layers-title" className="panel-section">
         <h2 id="layers-title">Layers</h2>
@@ -153,6 +149,22 @@ export default function AssessmentPanel({ loaded, selection, visible, onToggle, 
           </div>
         ))}
       </section>
+
+      {facilities.length > 0 && (
+        <section aria-labelledby="facilities-title" className="panel-section">
+          <h2 id="facilities-title">Facilities</h2>
+          <ul className="select-list">
+            {facilities.map((f) => (
+              <li key={f.id}>
+                <button type="button" aria-pressed={selectedId === f.id} onClick={() => onSelect({ kind: 'feature', layer: 'settlements', id: f.id })} data-testid={`facility-${f.id}`}>
+                  <span className="facility-mark" aria-hidden="true" />
+                  {String(prop(f.feature, 'name') ?? f.id)} <span className="small muted">({String(prop(f.feature, 'amenity') ?? 'facility')})</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="assets-title" className="panel-section">
         <h2 id="assets-title">Exposed assets and road edges</h2>

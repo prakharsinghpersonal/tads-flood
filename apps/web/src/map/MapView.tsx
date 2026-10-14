@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import maplibregl, { type GeoJSONSource, type Map as MlMap, type MapLayerMouseEvent } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { GeoJSONSource, Map as MlMap, MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// MapLibre 6 is ESM-only and resolves its worker next to its own module. In a
+// bundled build that file does not exist, so Vite bundles the worker (with its
+// shared chunk) and we hand MapLibre the emitted URL.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { Assessment, LayerName } from '../api/contract';
 import type { Selection } from '../domain/assessment';
+import type { SceneImage } from '../domain/scenes';
 import { BASE_STYLE, COLORS, STATUS_COLOR, attributionFor, bboxPolygon, normalized } from './mapStyle';
+
+maplibregl.setWorkerUrl(workerUrl);
 
 export type ToggleLayer = 'flood' | 'debris' | 'roads' | 'buildings' | 'settlements' | 'uncertainty';
 
@@ -19,8 +27,15 @@ export interface MissionOverlayData {
   drones: GeoJSON.FeatureCollection;
 }
 
+export interface RadarOverlay {
+  images: SceneImage[];
+  view: 'off' | 'before' | 'after';
+  opacity: number;
+}
+
 interface Props {
   assessment: Assessment;
+  radar: RadarOverlay;
   visible: Record<ToggleLayer, boolean>;
   highlight: Highlight;
   mission: MissionOverlayData | null;
@@ -33,14 +48,16 @@ const EMPTY_FC: GeoJSON.FeatureCollection = { type: 'FeatureCollection', feature
 const LAYER_GROUPS: Record<ToggleLayer, string[]> = {
   flood: ['flood-fill', 'flood-line'],
   debris: ['debris-fill', 'debris-line'],
-  roads: ['roads-line', 'roads-exposed'],
+  roads: ['roads-line', 'roads-exposed', 'roads-unknown'],
   buildings: ['buildings-fill', 'buildings-exposed'],
-  settlements: ['settlements-circle'],
+  settlements: ['settlements-circle', 'facilities'],
   uncertainty: ['unknown-buildings', 'unknown-settlements', 'aoi-nodata'],
 };
 
 const CLICKABLE: Array<[string, LayerName]> = [
   ['settlements-circle', 'settlements'],
+  ['facilities', 'settlements'],
+  ['roads-unknown', 'roads'],
   ['roads-line', 'roads'],
   ['roads-exposed', 'roads'],
   ['buildings-fill', 'buildings'],
@@ -63,7 +80,7 @@ function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-export default function MapView({ assessment, visible, highlight, mission, onSelect, onMapError }: Props) {
+export default function MapView({ assessment, radar, visible, highlight, mission, onSelect, onMapError }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   // The loaded map instance, not a boolean: a stale flag from a previous
@@ -142,7 +159,7 @@ export default function MapView({ assessment, visible, highlight, mission, onSel
         id: 'roads-line',
         type: 'line',
         source: 'roads',
-        filter: ['!=', ['get', 'status'], 'candidate_blocked'],
+        filter: ['!', ['in', ['get', 'status'], ['literal', ['candidate_blocked', 'unknown']]]],
         paint: { 'line-color': COLORS.road, 'line-width': 3 },
         layout: { 'line-cap': 'round' },
       });
@@ -152,6 +169,15 @@ export default function MapView({ assessment, visible, highlight, mission, onSel
         source: 'roads',
         filter: ['==', ['get', 'status'], 'candidate_blocked'],
         paint: { 'line-color': COLORS.roadExposed, 'line-width': 4, 'line-dasharray': [2, 1] },
+      });
+      // Unknown coverage: distinct purple dotted line, never drawn as passable.
+      map.addLayer({
+        id: 'roads-unknown',
+        type: 'line',
+        source: 'roads',
+        filter: ['==', ['get', 'status'], 'unknown'],
+        paint: { 'line-color': COLORS.unknown, 'line-width': 3, 'line-dasharray': [0.5, 1.5] },
+        layout: { 'line-cap': 'round' },
       });
       map.addLayer({ id: 'route-baseline', type: 'line', source: 'roads', filter: ['in', ['get', '__id'], ['literal', []]], paint: { 'line-color': COLORS.baseline, 'line-width': 9, 'line-opacity': 0.35 } });
       map.addLayer({ id: 'route-post', type: 'line', source: 'roads', filter: ['in', ['get', '__id'], ['literal', []]], paint: { 'line-color': COLORS.post, 'line-width': 6, 'line-opacity': 0.85 } });
@@ -181,12 +207,20 @@ export default function MapView({ assessment, visible, highlight, mission, onSel
         id: 'settlements-circle',
         type: 'circle',
         source: 'settlements',
+        filter: ['!=', ['get', 'kind'], 'facility'],
         paint: {
           'circle-radius': 8,
           'circle-color': ['match', ['get', 'status'], ...Object.entries(STATUS_COLOR).flat(), '#718096'] as never,
           'circle-stroke-color': '#ffffff',
           'circle-stroke-width': 2,
         },
+      });
+      map.addLayer({
+        id: 'facilities',
+        type: 'circle',
+        source: 'settlements',
+        filter: ['==', ['get', 'kind'], 'facility'],
+        paint: { 'circle-radius': 9, 'circle-color': COLORS.facility, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 },
       });
       map.addLayer({
         id: 'unknown-settlements',
@@ -204,7 +238,8 @@ export default function MapView({ assessment, visible, highlight, mission, onSel
           const id = e.features?.[0]?.properties?.__id;
           if (!id) return;
           e.originalEvent.stopPropagation();
-          handlers.current.onSelect(layer === 'settlements' ? { kind: 'settlement', id } : { kind: 'feature', layer, id });
+          const isSettlement = layerId === 'settlements-circle';
+          handlers.current.onSelect(isSettlement ? { kind: 'settlement', id } : { kind: 'feature', layer, id });
         });
         map.on('mouseenter', layerId, () => (map.getCanvas().style.cursor = 'pointer'));
         map.on('mouseleave', layerId, () => (map.getCanvas().style.cursor = ''));
@@ -267,6 +302,46 @@ export default function MapView({ assessment, visible, highlight, mission, onSel
     (map.getSource('mission-drones') as GeoJSONSource).setData(mission?.drones ?? EMPTY_FC);
   }, [mission, loadedMap]);
 
+  // Radar previews: image sources at the manifest's four corners, under all
+  // vector layers. Rebuilt when the image set changes (URLs are revoked by the
+  // owner), otherwise only visibility/opacity change.
+  const radarKey = radar.images.map((i) => i.url).join('|');
+  const [radarLoaded, setRadarLoaded] = useState<string[]>([]);
+  useEffect(() => {
+    const map = loadedMap;
+    if (!map || map !== mapRef.current) return;
+    setRadarLoaded([]);
+    for (const role of ['before_radar', 'after_radar']) {
+      if (map.getLayer(`radar-${role}`)) map.removeLayer(`radar-${role}`);
+      if (map.getSource(`radar-${role}`)) map.removeSource(`radar-${role}`);
+    }
+    for (const img of radar.images) {
+      const id = `radar-${img.asset.role}`;
+      map.addSource(id, { type: 'image', url: img.url, coordinates: img.asset.coordinates });
+      map.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': 0, 'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, 'aoi-nodata');
+    }
+    // Record which image sources actually decoded (exposed for tests/QA).
+    const onData = () => {
+      const done = radar.images.map((i) => i.asset.role).filter((role) => map.getSource(`radar-${role}`) && map.isSourceLoaded(`radar-${role}`));
+      setRadarLoaded((prev) => (prev.join() === done.join() ? prev : done));
+    };
+    map.on('sourcedata', onData);
+    return () => {
+      map.off('sourcedata', onData);
+    };
+  }, [radarKey, loadedMap]);
+
+  useEffect(() => {
+    const map = loadedMap;
+    if (!map || map !== mapRef.current) return;
+    for (const role of ['before_radar', 'after_radar'] as const) {
+      const id = `radar-${role}`;
+      if (!map.getLayer(id)) continue;
+      const on = (radar.view === 'before' && role === 'before_radar') || (radar.view === 'after' && role === 'after_radar');
+      map.setPaintProperty(id, 'raster-opacity', on ? radar.opacity : 0);
+    }
+  }, [radar.view, radar.opacity, radarKey, loadedMap]);
+
   useEffect(() => {
     const map = loadedMap;
     if (!map || map !== mapRef.current) return;
@@ -282,6 +357,8 @@ export default function MapView({ assessment, visible, highlight, mission, onSel
         aria-label="Assessment map. Use the settlement and asset lists for keyboard selection."
         data-testid="map"
         data-ready={loadedMap ? 'true' : 'false'}
+        data-radar={radar.images.length ? `${radar.view}:${radar.images.map((i) => i.asset.role).join(',')}` : 'none'}
+        data-radar-loaded={radarLoaded.join(',')}
       />
       {fatal && (
         <div className="map-fatal" role="alert">

@@ -21,6 +21,7 @@ export const COLORS = {
   cut: '#c53030',
   selected: '#111111',
   unknown: '#6b46c1',
+  facility: '#1a365d',
   aoi: '#1a202c',
 };
 

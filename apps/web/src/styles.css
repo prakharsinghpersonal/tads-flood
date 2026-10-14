@@ -205,6 +205,29 @@ thead th { font-size: 0.78rem; color: var(--muted); }
 .cmd-acknowledged strong { color: var(--ok); }
 details { margin: 0.6rem 0; }
 summary { cursor: pointer; min-height: 32px; font-weight: 600; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.tag-draft { background: repeating-linear-gradient(135deg, #fff5f5 0 6px, #fed7d7 6px 12px); color: #742a2a; border: 1px solid #c53030; }
+.tag-refused { background: #e2e8f0; color: #1a202c; border: 1px solid #4a5568; }
+.brief-answer { font-weight: 500; }
+.reviewed-status { margin-top: 0.6rem; }
+.copilot { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+textarea { font: inherit; width: 100%; padding: 0.5rem; border: 1px solid #a0aec0; border-radius: 6px; resize: vertical; min-height: 4.5rem; }
+.chip-text { font-family: inherit; text-align: left; border-radius: 6px; height: auto; white-space: normal; }
+.inline-select { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; }
+.inline-select select { width: auto; }
+.answer { border-left: 3px solid var(--accent); }
+.scene { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; align-items: baseline; padding: 0.35rem 0.5rem; border-radius: 6px; }
+.scene-active { background: #ebf4ff; box-shadow: inset 3px 0 0 var(--accent); }
+.scene-label { font-weight: 600; min-width: 6.5rem; }
+.scene-date { font-variant-numeric: tabular-nums; }
+.opacity input[type='range'] { min-height: 32px; padding: 0; border: 0; }
+.facility-mark { display: inline-block; width: 0.85rem; height: 0.85rem; border-radius: 50%; background: #1a365d; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #1a365d; flex: none; }
+.more-loads { margin: 0.3rem 0; }
+.readiness { color: var(--muted); }
+.decision { background: #f7fafc; border: 1px solid var(--line); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0.5rem 0; }
+.decision h3 { margin-top: 0; font-size: 0.88rem; }
+.method-notes summary { font-size: 0.85rem; color: var(--warn); }
+button.full { width: 100%; margin-top: 0.8rem; }
 .print-only { display: none; }
 
 /* Tablet and phone: map on top, panel below, inspector as a bottom sheet. */

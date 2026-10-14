@@ -1,118 +1,110 @@
 # Claude status
 
-Branch `claude/mission-ui`, worktree `tads-flood-claude`, base commit `310dd6e`.
-Checkpoint 1 (2026-10-13): Half B vertical slice is implemented and tested on
-disk. **Not yet committed**: the human commits and pushes this branch; record
-the commit hash here when that happens. No Codex-owned file was edited.
+Branch `claude/mission-ui`, worktree `tads-flood-claude`.
 
-## Stack
+- Checkpoint 1: `3b348df` (pushed). Codex reviewed and integrated it.
+- Checkpoint 2 (2026-10-14): built on `e9fc50a` (fast-forward of
+  `origin/codex/data-engine`, which contains `3b348df` plus Codex's backend and
+  its frontend integration fixes). **Commit hash: recorded by the human after
+  committing** (Claude does not run commit/push in this repo).
+- No Codex-owned file was edited. Untracked copies of four handoff docs that
+  blocked the fast-forward were moved, not deleted, to
+  `../tads-flood-claude-untracked-backup-20261013/`; all were older drafts of the
+  committed versions (compared line by line).
 
-React 18.3.1 + TypeScript 5.6.3 + Vite 5.4.11, MapLibre GL 4.7.1, zod 3.23.8
-(runtime contract validation), idb 8.0.0 (IndexedDB). Tests: Vitest 2.1.8 +
-Testing Library + fake-indexeddb; Playwright 1.49.1 (Chromium). Exact versions
-pinned in `apps/web/package.json` and `package-lock.json`. Node ≥22 (run on 25.8.1).
+## Codex corrections retained
 
-## What exists (paths)
+Reviewed and kept unchanged: synthetic assessments must use synthetic source
+kinds (consumer validation and UI fixture/builder), legacy `synthetic-s1-*`
+scene IDs still list dates, UUID package IDs, and test DB connections closed on
+reset. The binary package migration keeps UUID IDs.
 
-- `apps/web/src/api/contract.ts`: zod mirror of `contracts/assessment.schema.json`
-  (strict objects), job/report/error shapes, `parseAssessment` with reference and
-  integrity checks (version refusal, bbox order, evaluation_only sources, dangling
-  evidence/source IDs, synthetic URIs in live mode, summary/list agreement warning).
-- `apps/web/src/api/client.ts`: same-origin client (Vite proxies `/api`,`/health`
-  to `VITE_API_BASE_URL`, default `http://127.0.0.1:8000`), typed `ApiError`
-  kinds, abort/timeout, `runAssessment` (completed or polled job; cancel), request validation.
-- `apps/web/src/map/*`: MapLibre view with local-only style, layers, route/cut/selection
-  highlight, mission overlay, error banner + error boundary.
-- `apps/web/src/components/*`: prepare form/job states, assessment panel, evidence
-  inspector, report panel, map boundary.
-- `apps/web/src/offline/*`: IndexedDB package store (SHA-256 verified), offline
-  panel, online hook; `apps/web/public/sw.js` app-shell service worker (never caches `/api`).
-- `apps/web/src/mission/*`: deterministic TADS-inspired simulator (original code,
-  not imported from research repos) and its panel.
-- `apps/web/src/fixtures/synthetic-ui-assessment.json` + `apps/web/scripts/build-ui-fixture.py`:
-  frontend-owned synthetic fixture with geometry and all four settlement statuses.
-- `tests/e2e/*.spec.ts`, `apps/web/playwright.config.ts`, `.github/workflows/frontend.yml`,
-  `apps/web/scripts/check-bundle-secrets.mjs`, `docs/UI_SPEC.md`.
+## P0: dependency upgrade (audit gate)
 
-## Interfaces consumed / proposed
+`npm audit` before: 8 findings (3 critical, 3 high, 2 moderate). After: **0**.
 
-Consumed unchanged: contract v1 assessment; `POST /assessments` completed job;
-`GET /assessments/{id}`; `GET /demo`; `GET /report?language=en|ne` (shape read from
-`reports.py`, untyped in OpenAPI). Handled but not yet served by Codex: job polling
-and cancel (404 today, shown as an error). Proposal (not agreed):
-`docs/coordination/2026-10-13-ui-geometry-and-report-shape.md` covers feature property
-conventions, shared fixture geometry, `imagery` assets (1.1.0), typed report model.
+| Package | Was | Now | Reason |
+|---|---|---|---|
+| maplibre-gl (prod) | 4.7.1 | 6.11.2 | GHSA-jrc7-96c5-q579 (XSS sanitizer bypass, ≤6.4.0). 6.11.2 chosen over 6.14.0 (2 days old). |
+| vite | 5.4.11 | 7.3.7 | dev-server advisories ≤6.4.2; Vite 8 skipped (new Rolldown major) |
+| vitest | 2.1.8 | 4.1.11 | GHSA-9crc / GHSA-5xrq / GHSA-82fw (fixed ≥4.1.11) |
+| @vitejs/plugin-react | 4.3.4 | 5.2.0 | Vite 7 support (6.x requires Vite 8) |
+| @playwright/test | 1.49.1 | 1.63.0 | GHSA-7mvr (browser download TLS) |
+| @types/node | 22.10.1 | 22.20.5 | Vite 7 peer range |
+| @types/geojson | (transitive) | 7946.0.16 | MapLibre 6 no longer exposes the global type |
 
-## Tests run (measured on this tree, 2026-10-13)
+Migration work from upstream notes (MapLibre 5.0.0/6.0.0 breaking changes):
+ESM-only namespace import; WebGL2 required; the worker now loads from a URL
+next to the library, which does not exist in a bundle, so Vite bundles it
+(`?worker&url`, ES format) and `setWorkerUrl` receives the emitted file. That
+uncovered two real offline bugs, both fixed: the worker was not precached, and
+precached module scripts missed on `Vary: Origin` (offline start after a single
+visit loaded only HTML). The service worker now precaches the build's
+`asset-manifest.json`, matches with `ignoreVary`, and cleans only its own
+`tads-flood-shell-` caches. No unresolved advisory remains.
 
-Commands from `apps/web`:
+## P0: integration delivered
+
+- **API:** `/demo/geographic` is the main demo; legacy `/demo` and bundled fixture
+  are separate, labelled options. Typed zod parsing for `AssessmentPackage`,
+  `RasterAsset`, `GroundedReport`, copilot request, readiness. Byte fetches are
+  restricted to same-origin `/api/v1/...` paths (no `..`, no `//`, safe query).
+- **Radar:** `SceneCompare` + MapLibre image sources at manifest corners; PNG
+  SHA-256 and asset→source provenance verified; both dates visible; Before/After/
+  Hide and opacity, keyboard operable; unavailable/error states; object URLs revoked.
+- **Map:** unknown roads dotted purple; facility points (`kind: facility`) open a
+  facility view; exact edge-ID route/cut highlighting kept.
+- **Packages (`browser-package-2`):** exact `/snapshot` bytes (server hash), PNGs,
+  briefs (JSON+HTML), reports; documented not-ready answers recorded, never stored
+  as assets; verify-then-single-transaction write (quota/partial failure saves
+  nothing); re-verify on open; lossless v1 migration; tampered v1 refused untouched.
+- **Brief/copilot:** `/brief` main view, DRAFT badge for unreviewed Nepali,
+  reviewed-report status separate; copilot states for answer, refusal,
+  `ai_not_configured`, malformed, wrong-assessment and superseded responses;
+  print, HTML/JSON download from backend content; text-only rendering.
+- **P1 polish:** method notes collapsed, plain coverage line, "What this means"
+  decision block and "Open cited brief" in the settlement inspector,
+  `docs/DEMO_STORYBOARD.md` with ten frames in `docs/demo/screens/` (including
+  the honest live-provider-unavailable state).
+
+## Tests run (final tree, 2026-10-14, from `apps/web`)
 
 | Command | Result |
 |---|---|
 | `npm run typecheck` | pass |
-| `npm test` (Vitest) | 4 files, **38 passed**, 0 failed |
-| `npm run build` | pass (single 1.10 MB JS chunk, 307 kB gzip; MapLibre dominates) |
-| `npm run check:secrets` | pass, 28 files; verified it exits 1 on a planted `VITE_OHSOME_API_KEY` |
-| `npm run test:e2e` (Playwright, Chromium, prod build + service worker) | **11 passed**, 0 failed |
+| `npm test` (Vitest 4.1.11) | 4 files, **61 passed**, 0 failed |
+| `npm run build` (Vite 7.3.7) | pass; app JS 1.35 MB (374 kB gzip) + MapLibre worker 0.51 MB |
+| `npm run check:secrets` | pass, 37 files |
+| `npm audit` | **0 vulnerabilities** |
+| `npm run test:e2e` (Playwright 1.63.0, Chromium, prod build + service worker) | **20 passed**, 1 skipped (opt-in storyboard) |
+| `DEMO_SCREENS=1 npm run test:e2e -- --grep storyboard` | 1 passed, 10 frames written |
 
-Also checked by hand in the browser against Codex's running API on :8000: live
-mode shows `live_provider_unavailable` with no substitution; fixture map,
-selection, inspector, package save/open and the simulation all render.
+**Which checks use interception and which use the real API:**
 
-Matrix coverage:
+- Real local API (no interception): `tests/e2e/api-live.spec.ts`. It covers the
+  computed demo, both radar images decoded, the brief, copilot no-key state,
+  saving a package, and an offline reload with both images. It skips itself if
+  `:8000` is down, so it is skipped in GitHub CI. A manual browser check against
+  the real API was also done.
+- Intercepted with byte-exact recordings of the real backend: `tests/e2e/geographic.spec.ts`
+  (radar, 404/tampered PNG, facility, offline package reload, copilot keyboard,
+  320/768/1440) and `demo-screens.spec.ts`.
+- Unit tests use a fetch double built from the same recordings
+  (`src/test/fakeApi.ts`); failure cases (503 no-key, refusal, malformed, stale,
+  quota, partial download, tampering, migration) are mocked.
 
-| ID | Where tested | Status |
-|---|---|---|
-| U01 | App.test, workspace.spec | pass (shared + UI fixture; badges, real projected map) |
-| U02 | App.test (exact route/cut IDs), workspace.spec | pass |
-| U03 | App.test | partial: scene IDs/dates + layer toggles; **no raster** (not in v1) |
-| U04 | App.test (503, network+retry, cancel, empty, bad version), workspace.spec | pass |
-| U05 | App.test | pass |
-| U06 | App.test (facts vs summary, citation to inspector, NE 501, no browser report) | pass against mocked API; export buttons not E2E-tested |
-| O01 | offline.spec | pass |
-| O02, O03 | sim.test, offline.spec | pass |
-| O04 | sim.test, offline.spec | pass |
-| O05, O06 | sim.test, offline.spec | pass |
-| O07 | offline.spec (real offline reload), packageStore.test | pass |
-| O08 | App.test, offline.spec | pass |
-| O09 | sim.test (deep-frozen assessment) | pass |
-| O10 | sim.test (dedup, disagreement, exploration weight, separation) | pass |
-| O11 | sim.test | pass |
-| X01 | App.test, workspace.spec | pass (lists/tabs/inspector; the map canvas itself is not keyboard-operable, the lists are the keyboard path) |
-| X02 | workspace.spec 320/768/1440 | pass (no horizontal overflow; screenshots in `apps/web/test-results/screens/`) |
-| X03 | workspace.spec | pass (no running CSS animations; fitBounds animation off) |
-| S01 | check-bundle-secrets | pass (frontend half only) |
+## Remaining gates (not claimed)
 
-## Limits and caveats
-
-- All UI evidence is synthetic. Nothing here demonstrates mapping accuracy,
-  real-data processing, AI generation, or drone capability.
-- No before/after raster is drawn; v1 has no imagery asset.
-- Offline package is a browser snapshot (`origin: browser_snapshot`); the backend
-  package endpoint is planned. There are no offline basemap tiles because the map
-  uses none; real-data packages will need whatever raster assets Codex adds.
-- Map-click selection was exercised manually, not in an automated test.
-- Copilot Q&A UI is a placeholder until Codex ships the endpoint.
-- Single large JS chunk (MapLibre); acceptable for offline caching, not optimised.
+- No credentialed Sentinel/OSM run and no configured AI model: every shown
+  scene is synthetic; the AI copilot path is tested only with mocked responses.
+- Nepali text is unreviewed (draft badge shown).
+- MapLibre WebGL rendering is verified via decoded-source state and
+  screenshots, not pixel assertions.
+- Codex owns credentialed verification, real AOI recording and release gates.
 
 ## Integration instructions (for Codex)
 
 ```
-cd apps/web && npm ci && npm test && npm run build && npm run check:secrets
-npx playwright install chromium && npm run test:e2e
-npm run dev   # http://127.0.0.1:5173, proxies to the API on :8000
+cd apps/web && npm ci && npm run typecheck && npm test && npm run build && npm run check:secrets && npm audit
+npx playwright install chromium && npm run test:e2e   # api-live spec runs only if :8000 is up
 ```
-
-Root `.gitignore` already covers `node_modules/`, `dist/`, `test-results/`.
-
-## Next
-
-1. Human commits/pushes this checkpoint; record the hash here.
-2. Wire real assessments once Codex serves geometry; add imagery once the
-   proposal is agreed; copilot panel once the endpoint exists.
-3. Demo storyboard/screenshot support for the DEMO_PLAN 2:00–2:25 simulation segment.
-
-## Blockers
-
-None for the fixture-backed UI. Real-data screens depend on Codex's providers
-(CDSE, ohsome v2 key) and on agreement to the coordination proposal.

@@ -4,9 +4,11 @@ import AssessmentPanel from './components/AssessmentPanel';
 import EvidenceInspector from './components/EvidenceInspector';
 import MapBoundary from './components/MapBoundary';
 import PreparePanel from './components/PreparePanel';
-import ReportPanel, { type ReportLoader } from './components/ReportPanel';
+import ReportPanel, { type ReportSource } from './components/ReportPanel';
+import type { RadarView } from './components/SceneCompare';
 import OfflinePanel from './offline/OfflinePanel';
 import { CHANNEL_LABEL, MODE_LABEL, ageLabel, type LoadedAssessment, type Selection } from './domain/assessment';
+import { loadScenesFromApi, useSceneUrls, type SceneLoad } from './domain/scenes';
 import MapView, { type Highlight, type MissionOverlayData, type ToggleLayer } from './map/MapView';
 import { useOnline } from './offline/useOnline';
 import { lastPackageId, openPackage, type StoredPackage } from './offline/packageStore';
@@ -36,7 +38,9 @@ export default function App({ client: injected }: AppProps) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [visible, setVisible] = useState(DEFAULT_VISIBLE);
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
-  const [imageryView, setImageryView] = useState<'before' | 'after'>('after');
+  const [radarView, setRadarView] = useState<RadarView>('after');
+  const [radarOpacity, setRadarOpacity] = useState(0.85);
+  const [scenes, setScenes] = useState<SceneLoad>({ status: 'none', reason: 'No assessment loaded.' });
   const [mapError, setMapError] = useState<string | null>(null);
   const [mission, setMission] = useState<MissionOverlayData | null>(null);
 
@@ -50,6 +54,39 @@ export default function App({ client: injected }: AppProps) {
   }, []);
 
   const select = useCallback((sel: Selection) => setSelection(sel), []);
+
+  // Radar previews: verified PNG bytes from the backend package or the cached
+  // package. A bundled fixture has none, and nothing is drawn in their place.
+  useEffect(() => {
+    if (!loaded) {
+      setScenes({ status: 'none', reason: 'No assessment loaded.' });
+      return;
+    }
+    if (loaded.channel === 'offline_package') {
+      setScenes(pkg?.scenes ?? { status: 'none', reason: 'Package has no radar previews.' });
+      return;
+    }
+    if (loaded.channel === 'bundled_fixture') {
+      setScenes({ status: 'none', reason: 'The bundled UI fixture has no radar previews.' });
+      return;
+    }
+    const ctl = new AbortController();
+    setScenes({ status: 'loading' });
+    loadScenesFromApi(client, loaded.assessment, ctl.signal)
+      .then((r) => !ctl.signal.aborted && setScenes(r))
+      .catch((err) => {
+        if (ctl.signal.aborted) return;
+        const status = (err as { status?: number }).status;
+        setScenes(
+          status === 404
+            ? { status: 'none', reason: 'The backend has no package for this assessment.' }
+            : { status: 'error', message: (err as Error).message },
+        );
+      });
+    return () => ctl.abort();
+  }, [loaded, pkg, client]);
+  const sceneBlobs = useMemo(() => (scenes.status === 'ready' ? scenes.scenes : null), [scenes]);
+  const sceneImages = useSceneUrls(sceneBlobs);
 
   // When the browser starts offline, reopen the last package so cached viewing
   // survives a reload. Online starts stay empty until the user chooses.
@@ -100,21 +137,37 @@ export default function App({ client: injected }: AppProps) {
     return { baseline: [], post: [], cut: [], selected: [] };
   }, [loaded, selection]);
 
-  const loadReport: ReportLoader = useMemo(() => {
+  const reportSource: ReportSource | null = useMemo(() => {
     if (!loaded) return null;
+    const id = loaded.assessment.assessment_id;
     if (loaded.channel === 'api') {
-      const id = loaded.assessment.assessment_id;
-      return (lang, signal) => client.getReport(id, lang, signal);
+      return {
+        brief: (lang, signal) => client.getBrief(id, lang, signal),
+        reviewed: (lang, signal) => client.getReport(id, lang, signal),
+        briefHtml: async (lang, signal) => new Blob([(await client.briefHtml(id, lang, signal)).bytes], { type: 'text/html' }),
+        copilot: online ? (q, lang, signal) => client.askCopilot(id, q, lang, signal) : null,
+        copilotUnavailable: online ? null : 'The browser is offline. The copilot needs the API; cached briefs remain available.',
+      };
     }
     if (loaded.channel === 'offline_package' && pkg) {
-      return async (lang) => {
-        const r = pkg.reports[lang];
-        if (r.kind === 'ok') return r.received;
-        throw r.error;
+      const fromCache = async <T,>(doc: { kind: 'ok'; received: T } | { kind: 'error'; error: Error }) => {
+        if (doc.kind === 'ok') return doc.received;
+        throw doc.error;
+      };
+      return {
+        brief: (lang) => fromCache(pkg.docs.brief[lang]),
+        reviewed: (lang) => fromCache(pkg.docs.report[lang]),
+        briefHtml: async (lang) => {
+          const b = pkg.docs.briefHtml[lang];
+          if (!b) throw new Error('This package has no printable brief for that language.');
+          return b;
+        },
+        copilot: null,
+        copilotUnavailable: 'Cached package view. Questions need the live API; reopen the assessment online to ask.',
       };
     }
     return null;
-  }, [loaded, pkg, client]);
+  }, [loaded, pkg, client, online]);
 
   const a = loaded?.assessment;
 
@@ -155,7 +208,15 @@ export default function App({ client: injected }: AppProps) {
         <div className="map-area">
           {a ? (
             <MapBoundary onError={setMapError} resetKey={`${a.assessment_id}:${loaded!.received_at}`}>
-              <MapView assessment={a} visible={visible} highlight={highlight} mission={mission} onSelect={select} onMapError={setMapError} />
+              <MapView
+                assessment={a}
+                radar={{ images: sceneImages, view: radarView, opacity: radarOpacity }}
+                visible={visible}
+                highlight={highlight}
+                mission={mission}
+                onSelect={select}
+                onMapError={setMapError}
+              />
             </MapBoundary>
           ) : (
             <div className="map-placeholder" data-testid="empty-workspace">
@@ -220,7 +281,15 @@ export default function App({ client: injected }: AppProps) {
                 {loaded ? (
                   <>
                     <div className="button-row">
-                      <button type="button" onClick={() => setLoaded(null)}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoaded(null);
+                          setPkg(null);
+                          setSelection(null);
+                          setMission(null);
+                        }}
+                      >
                         New assessment
                       </button>
                     </div>
@@ -230,8 +299,11 @@ export default function App({ client: injected }: AppProps) {
                       visible={visible}
                       onToggle={(l) => setVisible((v) => ({ ...v, [l]: !v[l] }))}
                       onSelect={select}
-                      imageryView={imageryView}
-                      onImageryView={setImageryView}
+                      scenes={scenes}
+                      radarView={radarView}
+                      radarOpacity={radarOpacity}
+                      onRadarView={setRadarView}
+                      onRadarOpacity={setRadarOpacity}
                     />
                   </>
                 ) : (
@@ -241,7 +313,7 @@ export default function App({ client: injected }: AppProps) {
             )}
             {tab === 'report' &&
               (loaded ? (
-                <ReportPanel loaded={loaded} loadReport={loadReport} onSelect={select} />
+                <ReportPanel loaded={loaded} source={reportSource} onSelect={select} />
               ) : (
                 <p className="panel-section muted">Load an assessment to view its report.</p>
               ))}
@@ -273,6 +345,7 @@ export default function App({ client: injected }: AppProps) {
             }
             onSelect={select}
             onClose={() => setSelection(null)}
+            onOpenBrief={() => setTab('report')}
           />
         )}
       </main>

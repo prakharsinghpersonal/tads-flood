@@ -172,6 +172,72 @@ export const ReportSchema = z.object({
 export type Report = z.infer<typeof ReportSchema>;
 export type ReportClaim = z.infer<typeof ReportClaimSchema>;
 
+// Copilot answers and /brief previews (GroundedReport in contracts/openapi.json).
+// The generator says which path ran: deterministic_template is never AI.
+export const GroundedReportSchema = ReportSchema.extend({
+  model: z.string().nullable(),
+  refused: z.boolean(),
+  answer: z.string(),
+  translation_reviewed: z.boolean(),
+});
+export type GroundedReport = z.infer<typeof GroundedReportSchema>;
+
+export const CopilotRequestSchema = z
+  .object({ question: z.string().min(1).max(2000), language: z.enum(['en', 'ne']) })
+  .strict();
+
+const corner = z.tuple([z.number(), z.number()]);
+export const RasterAssetSchema = z
+  .object({
+    role: z.enum(['before_radar', 'after_radar']),
+    uri: z.string(),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    media_type: z.literal('image/png'),
+    // top-left, top-right, bottom-right, bottom-left (MapLibre image source order)
+    coordinates: z.tuple([corner, corner, corner, corner]),
+    source_id: z.string().nullable(),
+    acquired_at: isoDateTime.nullable(),
+    rendering: z.string(),
+  })
+  .strict();
+export type RasterAsset = z.infer<typeof RasterAssetSchema>;
+
+export const AssessmentPackageSchema = z
+  .object({
+    schema_version: z.string(),
+    assessment_id: z.string(),
+    mode: z.enum(['synthetic', 'live', 'cached_live']),
+    assessment: z.unknown(),
+    assessment_uri: z.string(),
+    assessment_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    assets: z.array(RasterAssetSchema),
+    attribution: z.array(z.string()),
+    limitations: z.array(z.string()),
+  })
+  .strict();
+export type AssessmentPackage = z.infer<typeof AssessmentPackageSchema>;
+
+// Booleans only; "configured" is not "verified".
+export const ReadinessSchema = z.object({
+  satellite_configured: z.boolean(),
+  historical_osm_configured: z.boolean(),
+  ai_configured: z.boolean(),
+  live_configured: z.boolean(),
+  note: z.string().optional(),
+});
+export type Readiness = z.infer<typeof ReadinessSchema>;
+
+// Only same-origin API paths may be fetched for package bytes (no arbitrary URLs).
+export function isSameOriginApiPath(uri: string) {
+  const [path, query = ''] = uri.split('?', 2);
+  return (
+    /^\/api\/v1\/[A-Za-z0-9._~%\/-]+$/.test(path) &&
+    !path.split('/').some((seg) => seg === '..' || seg === '.') &&
+    !path.includes('//') &&
+    /^[A-Za-z0-9=&_.-]*$/.test(query)
+  );
+}
+
 export const ErrorEnvelopeSchema = z.object({
   error: z.object({ code: z.string(), message: z.string(), retryable: z.boolean() }),
   details: z.unknown().optional(),

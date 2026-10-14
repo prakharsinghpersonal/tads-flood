@@ -33,9 +33,19 @@ Top bar: product name, then badges that are always visible once data is loaded:
      "Open bundled UI fixture" is a separate, explicitly labelled action.
    - *Summary*: backend `summary` values only; coverage quality and warnings;
      contract-integrity warnings (e.g. summary vs settlement list mismatch).
-   - *Before/after*: scene IDs and acquisition times from `sources`, split at the
-     event date. No raster is drawn because v1 has no imagery asset (proposal in
-     `docs/coordination/2026-10-13-ui-geometry-and-report-shape.md`).
+   - *Demo data*: "Load computed demo (synthetic)" calls `/api/v1/demo/geographic`
+     (backend pipeline on synthetic inputs). The empty legacy `/api/v1/demo` and
+     the bundled UI fixture sit under "Other test data". Readiness booleans are
+     shown as configuration only ("Configured does not mean tested"); the browser
+     never accepts keys.
+   - *Radar before/after*: PNGs named by `/assessments/{id}/package`, each fetched
+     from a same-origin API path, SHA-256 checked against the manifest and placed
+     with its four manifest corners as a MapLibre image source under all vector
+     layers. Before/After/Hide toggle plus opacity slider; both acquisition dates
+     stay visible. Asset `source_id`/`acquired_at` must match the assessment's
+     source record. No package / empty asset list → "Imagery unavailable"; hash
+     or provenance mismatch → error, nothing drawn. Transparent cells = no-data.
+     Object URLs are revoked whenever the scene set changes and on unmount.
    - *Layers*: candidate flood, candidate disturbance/debris, roads + exposed
      edges, exposed assets, settlement access, uncertainty/no-data.
    - *Settlement access*: grouped by status with separate labels and explainers:
@@ -43,14 +53,20 @@ Top bar: product name, then badges that are always visible once data is loaded:
      Connected, Disconnected before event (not flood impact).
    - *Exposed assets and road edges* list (keyboard path to map features).
    - *Limitations* from the payload.
-2. **Report**: fetches `/report?language=en|ne` from the backend. Shows the
-   generator tag (deterministic template is labelled "not the AI copilot"), a
-   facts table with a "matches map summary" column (comparison only; the browser
-   never computes totals), findings with clickable evidence-ID citations, data
-   availability, limitations, attribution. Nepali 501 is shown as "not available
-   yet"; no browser translation. Print (print CSS shows only the brief) and
-   download (.md brief, raw JSON). Bundled-fixture assessments show "no report".
-   Copilot Q&A: placeholder stating the endpoint is planned.
+2. **Report**: the backend `/brief?format=json` (GroundedReport) is the main
+   view: generator tag (`deterministic_template` → "Deterministic template — not
+   AI"; AI paths show generator · model), facts with a "same as map summary"
+   column (comparison only), findings with evidence-ID citations, data
+   availability, limitations. Nepali briefs with `translation_reviewed: false`
+   carry a DRAFT badge; the reviewed `/report?language=ne` status is shown
+   separately (501 → "not ready — fluent review pending"). Print, download of the
+   backend HTML bytes, and brief JSON. Bundled-fixture assessments show "no
+   backend brief". **Copilot**: POST `/copilot` with question (1–2000 chars) and
+   language; shows answer, claims with citations, refused tag, generator/model;
+   `ai_not_configured` 503 is shown as "not configured, no answer generated";
+   malformed or other-assessment answers are discarded; the panel is keyed per
+   assessment and ignores superseded responses. Offline or cached views disable
+   it with a reason. All backend strings render as text.
 3. **Offline & mission**: offline packages, then the simulation.
 
 ## Evidence inspector
@@ -69,6 +85,12 @@ status. There is no "mark safe".
 
 ## Map
 
+Unknown-coverage roads (`status: unknown`) use a dotted purple line and are
+described as "not known to be passable or blocked". Facility points
+(`layers.settlements`, `kind: facility`) are dark navy with a white ring, listed
+under *Facilities*, and open a facility view (amenity, settlements whose nearest
+facility it is before/after the event, evidence), never a settlement result.
+
 MapLibre GL with a local-only style (background + packaged GeoJSON; no remote
 tiles, glyphs or sprites), so cached viewing never needs the network. Colour is
 paired with a second cue: exposed roads dashed, debris dotted outline, unknown
@@ -79,13 +101,25 @@ crash is caught by an error boundary and the lists/inspector keep working.
 
 ## Offline packages
 
-"Save current assessment as offline package" stores in IndexedDB
-(`tads-flood` DB: `manifests`, `assets`, `missions`, `meta`): the exact assessment
-JSON, backend reports (EN/NE, or the recorded error), and a `browser-package-1`
-manifest with asset SHA-256s, AOI, event date, scene times, attributions,
-basemap note and limits. Opening re-hashes every asset and refuses a mismatch.
-A service worker caches only the built app shell (never `/api`), so after an
-offline reload the last package and its mission state reopen automatically.
+`browser-package-2` in IndexedDB (`tads-flood` DB: `manifests`, `assets`,
+`missions`, `meta`). For API assessments every asset is the exact byte payload:
+`/snapshot` (hash must equal `assessment_sha256`), both radar PNGs (hash must
+equal the manifest), English/Nepali briefs (JSON and HTML) and reviewed reports.
+Documented not-ready answers (4xx / 501 with an error code) are recorded as
+unavailable, never stored as assets; transport failures abort the save.
+Everything is verified in memory, then written in one transaction, so a quota
+or partial-download failure saves nothing. Opening re-hashes every asset.
+Bundled-fixture packages are labelled browser snapshots (local hashes only).
+`browser-package-1` packages are listed as "older format", verified and upgraded
+in place on open (same hashes, since v1 hashed the same UTF-8 bytes); a tampered
+v1 package is refused and left untouched. Package IDs are UUID-based.
+
+The service worker (`tads-flood-shell-v2`) precaches `index.html`, every file in
+the build's `asset-manifest.json` (including the bundled MapLibre worker), and
+the favicon; it never caches `/api`, matches with `ignoreVary` for the hashed
+shell files, and only deletes caches with its own prefix. After an offline
+reload the last package reopens with both radar images, briefs, original mode
+and its separate mission state. Internet loss never changes the radio-link state.
 Offline with no package: explicit "No offline package exists in this browser".
 
 ## Simulated inspection (optional)

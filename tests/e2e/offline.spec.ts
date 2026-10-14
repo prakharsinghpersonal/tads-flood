@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openBundled } from './helpers';
 
 test('O08: offline start without a package shows the missing-package screen', async ({ page, context }) => {
   await page.goto('/');
@@ -13,7 +14,7 @@ test('O01/O07/O02: cached package and mission survive an offline reload', async 
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload(); // ensure the page is controlled by the service worker
-  await page.getByRole('button', { name: 'Open bundled UI fixture (no API)' }).click();
+  await openBundled(page);
   await page.getByRole('tab', { name: 'Offline & mission' }).click();
   await page.getByRole('button', { name: 'Save current assessment as offline package' }).click();
   await expect(page.getByTestId('channel-badge')).toContainText('Cached offline package');
@@ -47,12 +48,12 @@ test('O01/O07/O02: cached package and mission survive an offline reload', async 
   await page.getByTestId('settlement-training-settlement-a').click();
   await expect(page.getByTestId('inspector')).toContainText('Cached offline package');
   await page.getByRole('tab', { name: 'Report' }).click();
-  await expect(page.getByText('No backend report in this package')).toBeVisible();
+  await expect(page.getByText('No backend brief in this package')).toBeVisible();
 });
 
 test('O04/O06 in the browser: reconnect after expiry needs review, events deduplicated', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open bundled UI fixture (no API)' }).click();
+  await openBundled(page);
   await page.getByRole('tab', { name: 'Offline & mission' }).click();
   await page.getByRole('button', { name: 'Save current assessment as offline package' }).click();
   await page.getByRole('button', { name: 'Start simulation' }).click();

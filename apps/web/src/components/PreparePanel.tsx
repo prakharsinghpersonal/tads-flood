@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ApiError, runAssessment, validateRequest, type ApiClient, type Received } from '../api/client';
-import { parseAssessment, type Assessment, type Job } from '../api/contract';
+import { parseAssessment, type Assessment, type Job, type Readiness } from '../api/contract';
 import uiFixture from '../fixtures/synthetic-ui-assessment.json';
 import type { LoadedAssessment } from '../domain/assessment';
 
@@ -53,6 +53,17 @@ export default function PreparePanel({ client, online, onLoaded }: Props) {
   const [state, setState] = useState<RunState>({ kind: 'idle' });
   const abortRef = useRef<AbortController | null>(null);
   const lastRun = useRef<(() => void) | null>(null);
+  const [readiness, setReadiness] = useState<Readiness | 'unavailable' | null>(null);
+
+  useEffect(() => {
+    if (!online) return;
+    const ctl = new AbortController();
+    client
+      .readiness(ctl.signal)
+      .then(setReadiness)
+      .catch(() => !ctl.signal.aborted && setReadiness('unavailable'));
+    return () => ctl.abort();
+  }, [client, online]);
 
   const accept = (r: Received<Assessment>) => {
     if (isEmptyAssessment(r.value)) {
@@ -161,14 +172,37 @@ export default function PreparePanel({ client, online, onLoaded }: Props) {
         {!online && <p className="small warn">Browser is offline. Live requests are unavailable; open a cached package instead.</p>}
       </form>
 
+      <h3>Demo data</h3>
       <div className="button-row secondary-loads">
-        <button type="button" disabled={running || !online} onClick={() => void run((s) => client.getDemo(s), 'API synthetic demo')}>
-          Load API synthetic demo
-        </button>
-        <button type="button" disabled={running} onClick={() => onLoaded(loadBundledFixture())}>
-          Open bundled UI fixture (no API)
+        <button type="button" className="primary" disabled={running || !online} onClick={() => void run((s) => client.getGeographicDemo(s), 'Computed synthetic demo')}>
+          Load computed demo (synthetic)
         </button>
       </div>
+      <p className="small muted">Runs the backend pipeline on synthetic radar and map data. Not a real flood finding.</p>
+      <details className="more-loads">
+        <summary>Other test data</summary>
+        <div className="button-row">
+          <button type="button" disabled={running || !online} onClick={() => void run((s) => client.getDemo(s), 'Legacy API fixture')}>
+            Load legacy API fixture (no geometry)
+          </button>
+          <button type="button" disabled={running} onClick={() => onLoaded(loadBundledFixture())}>
+            Open bundled UI fixture (no API)
+          </button>
+        </div>
+      </details>
+      {readiness && (
+        <p className="small readiness" data-testid="readiness">
+          {readiness === 'unavailable' ? (
+            'Server readiness unknown (API unreachable).'
+          ) : (
+            <>
+              Server configuration: satellite {readiness.satellite_configured ? 'configured' : 'not configured'}, historical OSM{' '}
+              {readiness.historical_osm_configured ? 'configured' : 'not configured'}, AI {readiness.ai_configured ? 'configured' : 'not configured'}.
+              Configured does not mean tested. Keys are set on the server only.
+            </>
+          )}
+        </p>
+      )}
 
       <div aria-live="polite" className="run-state">
         {state.kind === 'running' && (

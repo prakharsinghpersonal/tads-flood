@@ -2,13 +2,20 @@
 // server proxies /api and /health to VITE_API_BASE_URL. A failed request is an
 // error for the UI to show; this module never substitutes fixture data.
 import {
+  AssessmentPackageSchema,
   ErrorEnvelopeSchema,
+  GroundedReportSchema,
   JobSchema,
+  ReadinessSchema,
   ReportSchema,
+  isSameOriginApiPath,
   parseAssessment,
   type Assessment,
+  type AssessmentPackage,
   type AssessmentRequest,
+  type GroundedReport,
   type Job,
+  type Readiness,
   type Report,
 } from './contract';
 
@@ -42,7 +49,7 @@ export interface Received<T> {
 export function createClient({ fetchImpl, timeoutMs = 20_000 }: ClientOptions = {}) {
   const doFetch: FetchLike = fetchImpl ?? ((...args) => fetch(...args));
 
-  async function request(path: string, init: RequestInit & { signal?: AbortSignal } = {}): Promise<unknown> {
+  async function send(path: string, init: RequestInit & { signal?: AbortSignal } = {}, accept = 'application/json'): Promise<Response> {
     const timeout = new AbortController();
     const timer = setTimeout(() => timeout.abort(), timeoutMs);
     const outer = init.signal;
@@ -53,7 +60,7 @@ export function createClient({ fetchImpl, timeoutMs = 20_000 }: ClientOptions = 
       res = await doFetch(path, {
         ...init,
         signal: timeout.signal,
-        headers: { Accept: 'application/json', ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+        headers: { Accept: accept, ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
       });
     } catch (err) {
       if (outer?.aborted) throw new ApiError('cancelled', 'Request cancelled by the user.');
@@ -63,6 +70,35 @@ export function createClient({ fetchImpl, timeoutMs = 20_000 }: ClientOptions = 
       clearTimeout(timer);
       outer?.removeEventListener('abort', onOuterAbort);
     }
+    return res;
+  }
+
+  async function errorFrom(res: Response, path: string): Promise<ApiError> {
+    let body: unknown = null;
+    try {
+      body = JSON.parse(await res.text());
+    } catch {
+      /* not JSON */
+    }
+    const env = ErrorEnvelopeSchema.safeParse(body);
+    if (env.success) return new ApiError('http', env.data.error.message, res.status, env.data.error.code, env.data.error.retryable);
+    return new ApiError('http', `HTTP ${res.status} from ${path}.`, res.status, null, res.status >= 500);
+  }
+
+  // Raw bytes for hashing: never re-serialised. Only same-origin API paths.
+  async function bytes(path: string, signal?: AbortSignal): Promise<{ bytes: ArrayBuffer; contentType: string }> {
+    if (!isSameOriginApiPath(path)) throw new ApiError('invalid_response', `Refusing to fetch non-API path ${path}.`);
+    const res = await send(path, { signal }, '*/*');
+    if (!res.ok) throw await errorFrom(res, path);
+    try {
+      return { bytes: await res.arrayBuffer(), contentType: res.headers.get('content-type') ?? '' };
+    } catch (err) {
+      throw new ApiError('network', `Download of ${path} was interrupted: ${(err as Error).message}`, null, null, true);
+    }
+  }
+
+  async function request(path: string, init: RequestInit & { signal?: AbortSignal } = {}): Promise<unknown> {
+    const res = await send(path, init);
     let body: unknown = null;
     const text = await res.text();
     if (text) {
@@ -97,6 +133,44 @@ export function createClient({ fetchImpl, timeoutMs = 20_000 }: ClientOptions = 
   return {
     async health(signal?: AbortSignal) {
       return request('/health', { signal }) as Promise<{ status: string; schema_version: string }>;
+    },
+    async readiness(signal?: AbortSignal): Promise<Readiness> {
+      const r = ReadinessSchema.safeParse(await request('/api/v1/readiness', { signal }));
+      if (!r.success) throw new ApiError('invalid_response', 'Readiness response did not match the contract.');
+      return r.data;
+    },
+    // Computed synthetic training scene (populated layers + radar previews).
+    async getGeographicDemo(signal?: AbortSignal): Promise<Received<Assessment>> {
+      const value = parsedAssessment(await request('/api/v1/demo/geographic', { signal }));
+      return { value, received_at: now() };
+    },
+    async getPackage(id: string, signal?: AbortSignal): Promise<AssessmentPackage> {
+      const p = AssessmentPackageSchema.safeParse(await request(`/api/v1/assessments/${encodeURIComponent(id)}/package`, { signal }));
+      if (!p.success) throw new ApiError('invalid_response', `Package manifest did not match the contract: ${p.error.issues[0]?.path.join('.')}`);
+      if (p.data.assessment_id !== id) throw new ApiError('invalid_response', 'Package manifest names a different assessment.');
+      return p.data;
+    },
+    bytes,
+    async getBrief(id: string, language: 'en' | 'ne', signal?: AbortSignal): Promise<Received<GroundedReport>> {
+      const body = await request(`/api/v1/assessments/${encodeURIComponent(id)}/brief?language=${language}&format=json`, { signal });
+      const r = GroundedReportSchema.safeParse(body);
+      if (!r.success) throw new ApiError('invalid_response', 'Brief did not match the GroundedReport contract.');
+      return { value: r.data, received_at: now() };
+    },
+    // Backend-rendered printable brief (exact bytes, for download/print).
+    async briefHtml(id: string, language: 'en' | 'ne', signal?: AbortSignal) {
+      return bytes(`/api/v1/assessments/${encodeURIComponent(id)}/brief?language=${language}&format=html`, signal);
+    },
+    async askCopilot(id: string, question: string, language: 'en' | 'ne', signal?: AbortSignal): Promise<Received<GroundedReport>> {
+      const body = await request(`/api/v1/assessments/${encodeURIComponent(id)}/copilot`, {
+        method: 'POST',
+        body: JSON.stringify({ question, language }),
+        signal,
+      });
+      const r = GroundedReportSchema.safeParse(body);
+      if (!r.success) throw new ApiError('invalid_response', 'Copilot answer did not match the GroundedReport contract; nothing is shown.');
+      if (r.data.assessment_id !== id) throw new ApiError('invalid_response', 'Copilot answer belongs to a different assessment; discarded.');
+      return { value: r.data, received_at: now() };
     },
     async getDemo(signal?: AbortSignal): Promise<Received<Assessment>> {
       const value = parsedAssessment(await request('/api/v1/demo', { signal }));

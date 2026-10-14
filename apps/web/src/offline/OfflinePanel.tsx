@@ -3,7 +3,7 @@ import type { ApiClient } from '../api/client';
 import { MODE_LABEL, ageLabel, formatTime, shortHash, type LoadedAssessment } from '../domain/assessment';
 import type { MissionOverlayData } from '../map/MapView';
 import MissionPanel from '../mission/MissionPanel';
-import { createPackage, deletePackage, listPackages, openPackage, type PackageManifest, type StoredPackage } from './packageStore';
+import { LEGACY_MANIFEST_VERSION, createPackage, deletePackage, listPackages, openPackage, type ListedManifest, type StoredPackage } from './packageStore';
 
 interface Props {
   client: ApiClient;
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function OfflinePanel({ client, online, loaded, activePackage, onOpenPackage, onMissionOverlay }: Props) {
-  const [packages, setPackages] = useState<PackageManifest[] | null>(null);
+  const [packages, setPackages] = useState<ListedManifest[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -117,12 +117,37 @@ export default function OfflinePanel({ client, online, loaded, activePackage, on
                   <dd>
                     {m.event_date} · {m.aoi.join(', ')}
                   </dd>
-                  <dt>Scenes</dt>
+                  <dt>Source times</dt>
                   <dd>{m.scene_times.map((s) => `${s.source_id} ${formatTime(s.acquired_at)}`).join('; ')}</dd>
-                  <dt>Reports</dt>
-                  <dd>{m.reports.map((r) => `${r.language}: ${r.status}${r.error_code ? ` (${r.error_code})` : ''}`).join(' · ')}</dd>
-                  <dt>Assets</dt>
-                  <dd>{m.assets.map((a) => `${a.asset_id} ${shortHash(a.sha256)}`).join(' · ')}</dd>
+                  {m.manifest_version === LEGACY_MANIFEST_VERSION ? (
+                    <>
+                      <dt>Format</dt>
+                      <dd data-testid="legacy-package">Older format (v1, no radar previews or briefs). Verified and upgraded when opened; nothing is discarded.</dd>
+                    </>
+                  ) : (
+                    <>
+                      <dt>Origin</dt>
+                      <dd>{m.origin === 'backend_package' ? 'Exact backend package (server hashes)' : 'Browser snapshot (no backend hashes)'}{m.migrated_from ? `, upgraded from ${m.migrated_from}` : ''}</dd>
+                      <dt>Radar</dt>
+                      <dd>
+                        {m.assets.filter((x) => x.raster).length
+                          ? m.assets
+                              .filter((x) => x.raster)
+                              .map((x) => `${x.asset_id === 'before_radar' ? 'before' : 'after'} ${x.raster!.acquired_at ? formatTime(x.raster!.acquired_at) : 'time n/a'}`)
+                              .join(' · ')
+                          : 'none'}
+                      </dd>
+                      <dt>Briefs</dt>
+                      <dd>
+                        {m.docs
+                          .filter((d) => d.doc_id.startsWith('brief-') && !d.doc_id.startsWith('brief-html'))
+                          .map((d) => `${d.doc_id.slice(6)}: ${d.status}`)
+                          .join(' · ')}
+                      </dd>
+                      <dt>Assets</dt>
+                      <dd>{m.assets.map((x) => `${x.asset_id} ${shortHash(x.sha256)}`).join(' · ')}</dd>
+                    </>
+                  )}
                   <dt>Basemap</dt>
                   <dd>{m.basemap}</dd>
                 </dl>

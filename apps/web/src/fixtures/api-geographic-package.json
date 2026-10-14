@@ -1,0 +1,79 @@
+{
+ "schema_version": "1.0.0",
+ "assessment_id": "synthetic-f7bbfcb32a42e8f9e7c992a1",
+ "mode": "synthetic",
+ "assessment": "(omitted in recording; see api-geographic-snapshot.json)",
+ "assessment_uri": "/api/v1/assessments/synthetic-f7bbfcb32a42e8f9e7c992a1/snapshot",
+ "assessment_sha256": "7b2135d0cbe1b0be4db52e707b4cab6f478599361a986a2ccc3b988d5fa8c31d",
+ "assets": [
+  {
+   "role": "before_radar",
+   "uri": "/api/v1/assessments/synthetic-f7bbfcb32a42e8f9e7c992a1/imagery/before",
+   "sha256": "91fb72a55a163b4b0f17f2f041830e28e4eb9ec306f7907f91721eee2147488c",
+   "media_type": "image/png",
+   "coordinates": [
+    [
+     85.24967873618267,
+     27.869995922034313
+    ],
+    [
+     85.26999599070128,
+     27.870252345901577
+    ],
+    [
+     85.2703175332088,
+     27.850003981899476
+    ],
+    [
+     85.25000405023042,
+     27.84974777627552
+    ]
+   ],
+   "source_id": "synthetic-radar-before",
+   "acquired_at": "2026-08-20T00:00:00Z",
+   "rendering": "VV dB, -30..0; alpha=nodata"
+  },
+  {
+   "role": "after_radar",
+   "uri": "/api/v1/assessments/synthetic-f7bbfcb32a42e8f9e7c992a1/imagery/after",
+   "sha256": "599922f749d2136ca016062738e6afba4d57590fb9a9749e62e75e86178e63a1",
+   "media_type": "image/png",
+   "coordinates": [
+    [
+     85.24967873618267,
+     27.869995922034313
+    ],
+    [
+     85.26999599070128,
+     27.870252345901577
+    ],
+    [
+     85.2703175332088,
+     27.850003981899476
+    ],
+    [
+     85.25000405023042,
+     27.84974777627552
+    ]
+   ],
+   "source_id": "synthetic-radar-after",
+   "acquired_at": "2026-09-01T00:00:00Z",
+   "rendering": "VV dB, -30..0; alpha=nodata"
+  }
+ ],
+ "attribution": [
+  "Synthetic training data; no real-world flood finding."
+ ],
+ "limitations": [
+  "Candidate exposure is not confirmed damage, bridge failure or road closure.",
+  "Backscatter-change scores are heuristic, not calibrated flood probabilities.",
+  "Steep DEM slopes are masked; full radar layover/shadow modeling is not implemented.",
+  "Optical corroboration unavailable; candidate results are SAR-only.",
+  "Brightening is a candidate disturbance layer, not validated debris segmentation.",
+  "Road graph uses geometric noding; OSM turn restrictions and node-ID semantics are not fully represented.",
+  "Road access is assessed within the requested AOI, not the entire regional network.",
+  "Only mapped vehicle-access roads and facilities are considered; apparent cuts at the AOI boundary can be artifacts.",
+  "DEM acquired_at is the server retrieval time, not an original elevation survey date.",
+  "Synthetic geographic training data; no real finding about this area."
+ ]
+}

@@ -1,59 +1,63 @@
 import { useEffect, useState } from 'react';
 import type { Received } from '../api/client';
-import type { Report } from '../api/contract';
-import { attributionFor } from '../map/mapStyle';
+import type { GroundedReport, Report } from '../api/contract';
 import { CHANNEL_LABEL, MODE_LABEL, formatTime, type LoadedAssessment, type Selection } from '../domain/assessment';
+import { attributionFor } from '../map/mapStyle';
+import CopilotPanel from './CopilotPanel';
 import { describeError } from './PreparePanel';
 
-export type ReportLoader = ((lang: 'en' | 'ne', signal: AbortSignal) => Promise<Received<Report>>) | null;
+type Lang = 'en' | 'ne';
+
+// Where report content comes from. All of it is backend output (live API or the
+// exact bytes cached in a package); the browser never composes report text.
+export interface ReportSource {
+  brief: (lang: Lang, signal: AbortSignal) => Promise<Received<GroundedReport>>;
+  reviewed: (lang: Lang, signal: AbortSignal) => Promise<Received<Report>>;
+  briefHtml: (lang: Lang, signal: AbortSignal) => Promise<Blob>;
+  copilot: ((question: string, lang: Lang, signal: AbortSignal) => Promise<Received<GroundedReport>>) | null;
+  copilotUnavailable: string | null;
+}
 
 interface Props {
   loaded: LoadedAssessment;
-  loadReport: ReportLoader;
+  source: ReportSource | null;
   onSelect: (sel: Selection) => void;
 }
 
-const FACT_LABEL: Record<string, string> = {
+export const FACT_LABEL: Record<string, string> = {
   potentially_isolated_count: 'Potentially isolated settlements',
-  unknown_network_count: 'Settlements with unknown network',
+  unknown_network_count: 'Settlements with unknown road access',
   exposed_asset_count: 'Exposed assets',
   candidate_flood_area_m2: 'Candidate flood area (m²)',
 };
 
-type State =
-  | { kind: 'loading' }
-  | { kind: 'ready'; report: Received<Report> }
-  | { kind: 'error'; title: string; detail: string; code: string | null };
+type Load<T> = { kind: 'loading' } | { kind: 'ready'; value: Received<T> } | { kind: 'error'; title: string; detail: string; code: string | null };
 
-export function reportToMarkdown(r: Report, loaded: LoadedAssessment): string {
-  const a = loaded.assessment;
-  const lines = [
-    `# Situation brief: ${a.assessment_id}`,
-    '',
-    `Mode: ${MODE_LABEL[a.mode]} · Generator: ${r.generator} (AI ready: ${r.ai_ready}) · Language: ${r.language}`,
-    `Event date: ${a.event_date} · Generated: ${a.generated_at} · BBox: ${a.bbox.join(', ')}`,
-    '',
-    '## Facts (from backend)',
-    ...Object.entries(r.facts).map(([k, v]) => `- ${FACT_LABEL[k] ?? k}: ${v ?? 'not computed'} [fact:${k}]`),
-    '',
-    '## Findings',
-    ...r.claims.map((c) => `- ${c.text} [${c.evidence_ids.join(', ') || 'no evidence ID'}]`),
-    '',
-    '## Data availability',
-    `- Coverage: ${a.quality.status}, valid fraction ${a.quality.valid_fraction}`,
-    ...a.quality.warnings.map((w) => `- ${w}`),
-    ...a.sources.map((s) => `- Source ${s.source_id}: ${s.kind}, acquired ${s.acquired_at}, ${s.license}`),
-    '',
-    '## Limitations',
-    ...r.limitations.map((l) => `- ${l}`),
-    '',
-    `Attribution: ${attributionFor(a)}`,
-  ];
-  return lines.join('\n');
+function useLoad<T>(fn: ((signal: AbortSignal) => Promise<Received<T>>) | null, deps: unknown[]): Load<T> {
+  const [state, setState] = useState<Load<T>>({ kind: 'loading' });
+  useEffect(() => {
+    if (!fn) return;
+    const ctl = new AbortController();
+    setState({ kind: 'loading' });
+    fn(ctl.signal)
+      .then((value) => !ctl.signal.aborted && setState({ kind: 'ready', value }))
+      .catch((err) => {
+        if (ctl.signal.aborted) return;
+        const d = describeError(err);
+        setState({ kind: 'error', title: d.title, detail: d.detail, code: (err as { code?: string }).code ?? null });
+      });
+    return () => ctl.abort();
+  }, deps);
+  return state;
 }
 
-function download(name: string, text: string, type: string) {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+export function generatorLabel(r: Pick<GroundedReport, 'generator' | 'ai_ready'> & { model?: string | null }) {
+  if (r.generator === 'deterministic_template' || !r.ai_ready) return { ai: false, text: 'Deterministic template — not AI' };
+  return { ai: true, text: `AI: ${r.generator}${r.model ? ` · ${r.model}` : ''}` };
+}
+
+function download(name: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
@@ -61,40 +65,37 @@ function download(name: string, text: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function ReportPanel({ loaded, loadReport, onSelect }: Props) {
-  const [lang, setLang] = useState<'en' | 'ne'>('en');
-  const [state, setState] = useState<State>({ kind: 'loading' });
+export default function ReportPanel({ loaded, source, onSelect }: Props) {
+  const [lang, setLang] = useState<Lang>('en');
   const a = loaded.assessment;
+  const brief = useLoad<GroundedReport>(source ? (s) => source.brief(lang, s) : null, [source, lang]);
+  const reviewed = useLoad<Report>(source ? (s) => source.reviewed(lang, s) : null, [source, lang]);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loadReport) return;
-    const ctl = new AbortController();
-    setState({ kind: 'loading' });
-    loadReport(lang, ctl.signal)
-      .then((report) => setState({ kind: 'ready', report }))
-      .catch((err) => {
-        if (ctl.signal.aborted) return;
-        const d = describeError(err);
-        setState({ kind: 'error', title: d.title, detail: d.detail, code: (err as { code?: string }).code ?? null });
-      });
-    return () => ctl.abort();
-  }, [loadReport, lang]);
-
-  if (!loadReport) {
+  if (!source) {
     return (
       <section className="panel-section" aria-labelledby="report-title">
-        <h2 id="report-title">Situation report</h2>
+        <h2 id="report-title">Situation brief</h2>
         <p className="notice">
-          Reports are generated by the backend from computed facts. This assessment came from the {CHANNEL_LABEL[loaded.channel].toLowerCase()}, which has no report. The browser does not compose its own totals.
+          Briefs come from the backend. This assessment came from the {CHANNEL_LABEL[loaded.channel].toLowerCase()}, which has no backend brief, so none is shown.
         </p>
       </section>
     );
   }
 
+  async function saveHtml() {
+    setDownloadError(null);
+    try {
+      download(`${a.assessment_id}-${lang}-brief.html`, await source!.briefHtml(lang, new AbortController().signal));
+    } catch (err) {
+      setDownloadError(describeError(err).detail);
+    }
+  }
+
   return (
     <section className="panel-section report" aria-labelledby="report-title">
-      <h2 id="report-title">Situation report</h2>
-      <div className="segmented" role="group" aria-label="Report language">
+      <h2 id="report-title">Situation brief</h2>
+      <div className="segmented" role="group" aria-label="Brief language">
         <button type="button" aria-pressed={lang === 'en'} onClick={() => setLang('en')}>
           English
         </button>
@@ -102,107 +103,136 @@ export default function ReportPanel({ loaded, loadReport, onSelect }: Props) {
           नेपाली (Nepali)
         </button>
       </div>
-      {state.kind === 'loading' && <p role="status">Loading report…</p>}
-      {state.kind === 'error' && (
+
+      {brief.kind === 'loading' && <p role="status">Loading brief…</p>}
+      {brief.kind === 'error' && (
         <div className="error-box" role="alert">
-          <strong>{state.code === 'language_not_ready' ? 'Nepali report not available yet' : state.code === 'no_report_source' ? 'No backend report in this package' : state.title}</strong>
-          <p>{state.detail}</p>
-          {state.code === 'language_not_ready' && <p className="small">The browser does not machine-translate reports. The backend must produce reviewed Nepali text from the same facts.</p>}
+          <strong>{brief.code === 'no_report_source' ? 'No backend brief in this package' : `Brief unavailable: ${brief.title}`}</strong>
+          <p>{brief.detail}</p>
         </div>
       )}
-      {state.kind === 'ready' && <ReportBody report={state.report} loaded={loaded} onSelect={onSelect} />}
-      <section aria-labelledby="copilot-title" className="copilot-placeholder">
-        <h3 id="copilot-title">Copilot questions</h3>
-        <p className="small muted">The grounded copilot endpoint is planned in the API contract and not yet served. No questions are answered in the browser.</p>
-      </section>
-    </section>
-  );
+      {brief.kind === 'ready' && <BriefBody received={brief.value} loaded={loaded} onSelect={onSelect} />}
 
-  function ReportBody({ report: { value: r, received_at }, loaded: l, onSelect: select }: { report: Received<Report>; loaded: LoadedAssessment; onSelect: (s: Selection) => void }) {
-    const template = r.generator === 'deterministic_template' || !r.ai_ready;
-    const mismatch = r.assessment_id !== a.assessment_id || r.mode !== a.mode;
-    return (
-      <div id="report-print" data-testid="report">
-        <p className="print-only">
-          <strong>TADS Flood situation brief</strong> · {MODE_LABEL[a.mode]} · {a.assessment_id}
-        </p>
-        <p>
-          <span className={`tag ${template ? 'tag-template' : 'tag-ai'}`} data-testid="report-generator">
-            {template ? 'Deterministic template — not the AI copilot' : `AI generator: ${r.generator}`}
-          </span>{' '}
-          <span className={`tag tag-mode-${r.mode}`}>{MODE_LABEL[r.mode]}</span>
-        </p>
-        {mismatch && (
-          <p className="error-box" role="alert">
-            Report belongs to {r.assessment_id} ({r.mode}) but the workspace shows {a.assessment_id} ({a.mode}). Not shown as this assessment's report.
-          </p>
-        )}
-        <h3>Facts</h3>
-        <table className="facts-table">
-          <thead>
-            <tr>
-              <th scope="col">Fact</th>
-              <th scope="col">Value</th>
-              <th scope="col">Matches map summary</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(r.facts).map(([k, v]) => {
-              const summary = (a.summary as Record<string, unknown>)[k];
-              const agree = summary === undefined ? 'not in summary' : summary === v ? 'yes' : `NO (summary: ${String(summary)})`;
-              return (
-                <tr key={k} data-fact={k}>
-                  <th scope="row">{FACT_LABEL[k] ?? k}</th>
-                  <td>{v ?? 'not computed'}</td>
-                  <td className={agree.startsWith('NO') ? 'warn' : ''}>{agree}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <h3>Findings</h3>
-        <ul className="claims">
-          {r.claims.map((c) => (
-            <li key={c.claim_id}>
-              {c.text}{' '}
-              {c.evidence_ids.length ? (
-                c.evidence_ids.map((id) => (
-                  <button key={id} type="button" className="cite" onClick={() => select({ kind: 'evidence', id })} aria-label={`Open evidence ${id}`}>
-                    [{id}]
-                  </button>
-                ))
-              ) : (
-                <span className="warn small">(no evidence ID — unsupported claim)</span>
-              )}
-            </li>
-          ))}
-        </ul>
-        <h3>Data availability</h3>
-        <p className="small">
-          Coverage {a.quality.status}, valid fraction {(a.quality.valid_fraction * 100).toFixed(0)}%. Sources:{' '}
-          {a.sources.map((s) => `${s.source_id} (${s.kind}, ${formatTime(s.acquired_at)})`).join('; ')}.
-        </p>
-        <h3>Limitations</h3>
-        <ul className="small">
-          {r.limitations.map((x) => (
-            <li key={x}>{x}</li>
-          ))}
-        </ul>
-        <p className="small muted">
-          Report received {formatTime(received_at)} via {CHANNEL_LABEL[l.channel].toLowerCase()}. Attribution: {attributionFor(a)}.
-        </p>
+      <p className="small reviewed-status" data-testid="reviewed-status">
+        Reviewed {lang === 'ne' ? 'Nepali' : 'English'} report:{' '}
+        {reviewed.kind === 'loading'
+          ? 'checking…'
+          : reviewed.kind === 'ready'
+            ? 'available'
+            : reviewed.code === 'language_not_ready'
+              ? 'not ready — fluent review pending (language_not_ready)'
+              : `unavailable (${reviewed.code ?? reviewed.title})`}
+      </p>
+
+      {brief.kind === 'ready' && (
         <div className="button-row no-print">
           <button type="button" onClick={() => window.print()}>
-            Print one-page brief
+            Print brief
           </button>
-          <button type="button" onClick={() => download(`${a.assessment_id}-${r.language}-brief.md`, reportToMarkdown(r, l), 'text/markdown')}>
-            Download brief (.md)
+          <button type="button" onClick={() => void saveHtml()}>
+            Download brief (HTML)
           </button>
-          <button type="button" onClick={() => download(`${a.assessment_id}-${r.language}-report.json`, JSON.stringify(r, null, 2), 'application/json')}>
-            Download report JSON
+          <button
+            type="button"
+            onClick={() => download(`${a.assessment_id}-${lang}-brief.json`, new Blob([JSON.stringify(brief.value.value, null, 2)], { type: 'application/json' }))}
+          >
+            Download brief JSON
           </button>
         </div>
-      </div>
+      )}
+      {downloadError && (
+        <p className="error-box small" role="alert">
+          {downloadError}
+        </p>
+      )}
+
+      <CopilotPanel key={a.assessment_id} assessmentId={a.assessment_id} ask={source.copilot} unavailable={source.copilotUnavailable} onSelect={onSelect} />
+    </section>
+  );
+}
+
+function BriefBody({ received, loaded, onSelect }: { received: Received<GroundedReport>; loaded: LoadedAssessment; onSelect: (s: Selection) => void }) {
+  const r = received.value;
+  const a = loaded.assessment;
+  const gen = generatorLabel(r);
+  const mismatch = r.assessment_id !== a.assessment_id || r.mode !== a.mode;
+  if (mismatch) {
+    return (
+      <p className="error-box" role="alert">
+        Brief belongs to {r.assessment_id} ({r.mode}) but the workspace shows {a.assessment_id} ({a.mode}). Not shown.
+      </p>
     );
   }
+  return (
+    <div id="report-print" data-testid="report" lang={r.language}>
+      <p className="print-only">
+        <strong>TADS Flood situation brief</strong> · {MODE_LABEL[a.mode]} · {a.assessment_id}
+      </p>
+      <p className="tag-row">
+        <span className={`tag ${gen.ai ? 'tag-ai' : 'tag-template'}`} data-testid="report-generator">
+          {gen.text}
+        </span>
+        <span className={`tag tag-mode-${r.mode}`}>{MODE_LABEL[r.mode]}</span>
+        {!r.translation_reviewed && r.language !== 'en' && (
+          <span className="tag tag-draft" data-testid="draft-badge">
+            DRAFT — translation not reviewed
+          </span>
+        )}
+      </p>
+      {r.answer && <p className="brief-answer">{r.answer}</p>}
+      <table className="facts-table">
+        <thead>
+          <tr>
+            <th scope="col">Fact</th>
+            <th scope="col">Value</th>
+            <th scope="col">Same as map summary</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(r.facts).map(([k, v]) => {
+            const summary = (a.summary as Record<string, unknown>)[k];
+            const agree = summary === undefined ? 'not in summary' : summary === v ? 'yes' : `NO (map: ${String(summary)})`;
+            return (
+              <tr key={k} data-fact={k}>
+                <th scope="row">{FACT_LABEL[k] ?? k}</th>
+                <td>{typeof v === 'number' && k.endsWith('_m2') ? Math.round(v).toLocaleString('en') : (v ?? 'not computed')}</td>
+                <td className={agree.startsWith('NO') ? 'warn' : ''}>{agree}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <h3>Findings</h3>
+      <ul className="claims">
+        {r.claims.map((c) => (
+          <li key={c.claim_id}>
+            {c.text}{' '}
+            {c.evidence_ids.length ? (
+              c.evidence_ids.map((id) => (
+                <button key={id} type="button" className="cite" onClick={() => onSelect({ kind: 'evidence', id })} aria-label={`Open evidence ${id}`}>
+                  [{id}]
+                </button>
+              ))
+            ) : (
+              <span className="warn small">(no evidence ID — unsupported claim)</span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <h3>Data availability</h3>
+      <p className="small">
+        Coverage {a.quality.status}, valid fraction {(a.quality.valid_fraction * 100).toFixed(0)}%. Sources:{' '}
+        {a.sources.map((s) => `${s.source_id} (${formatTime(s.acquired_at)})`).join('; ')}.
+      </p>
+      <h3>Limitations</h3>
+      <ul className="small">
+        {r.limitations.map((x) => (
+          <li key={x}>{x}</li>
+        ))}
+      </ul>
+      <p className="small muted">
+        Received {formatTime(received.received_at)} via {CHANNEL_LABEL[loaded.channel].toLowerCase()}. Attribution: {attributionFor(a)}.
+      </p>
+    </div>
+  );
 }
