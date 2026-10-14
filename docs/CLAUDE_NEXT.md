@@ -23,6 +23,8 @@ The backend runs at 127.0.0.1:8000. No source/model credentials are configured.
   producer-consumer fixture test and frontend regression test pass. Your own
   checkout was left untouched. Merge latest origin/codex/data-engine to inherit
   this correction before starting further UI work; review it, do not weaken it.
+  The integration branch also fixes package-ID collisions with UUIDs and closes
+  test DB connections. Retain those corrections during your binary-package migration.
 - `npm audit --json` reports eight findings (three critical, three high, two
   moderate) in the pinned dependency tree, including production MapLibre and dev
   Vite/Vitest/Playwright. Upgrade your owned package.json/lockfile to supported

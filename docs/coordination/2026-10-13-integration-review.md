@@ -14,7 +14,7 @@ Codex made a small integration correction under the user's request to complete
 integration: fixture/builder kinds, consumer kind guard, declared legacy training
 scene display and one consumer regression. Claude's checkout was not edited.
 The new producer-consumer test passes; combined local checks now have 93 backend,
-39 frontend unit and 11 browser cases passing. No dependency versions changed.
+40 frontend unit and 11 browser cases passing. No dependency versions changed.
 
 npm audit reports eight advisory findings in the pinned frontend tree: production
 MapLibre plus dev tooling dependencies. These require an upstream-informed
@@ -25,3 +25,7 @@ Next task and precise file/test list: docs/CLAUDE_NEXT.md. It is also copied int
 Claude's worktree. Schema v1 remains frozen. Backend imagery/package/copilot
 endpoints are additive and ready for consumer wiring. Credentials, real-data
 execution and official-reference/model evaluation remain separate release gates.
+
+CI later caught test DB connection leakage and a production package-ID collision
+when multiple saves shared a second. Codex corrected both in the integration
+branch; 047d2fe passes backend and frontend CI with 93/40/11 measured tests.

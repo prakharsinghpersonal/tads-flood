@@ -1,6 +1,6 @@
 # Codex status
 
-Ready combined code checkpoint: `4ee3020` on `codex/data-engine`; draft PR:
+Ready combined code checkpoint: `047d2fe` on `codex/data-engine`; draft PR:
 https://github.com/prakharsinghpersonal/tads-flood/pull/1.
 Planning and shared foundation are on main; computed backend work is on this
 branch. Assessment schema remains 1.0.0. See the runtime coordination note for
@@ -49,9 +49,9 @@ Claude's additive integration endpoints and the response to its proposal.
   were 583/603 px before the final grammar change. A4 CSS is provided, but this
   check does not certify every future dataset's export fits one page.
 
-Combined code checkpoint `4ee3020` passed GitHub [backend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38503598824)
-and [frontend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38503598850).
-Codex independently ran 39 frontend unit tests and 11 browser tests after the
+Combined code checkpoint `047d2fe` passed GitHub [backend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38505439612)
+and [frontend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38505439663).
+Codex independently ran 40 frontend unit tests and 11 browser tests after the
 integration provenance correction; typecheck/build/bundle secret checks passed.
 The combined launcher and same-origin UI proxy were checked against the running
 API, including typed packages, asset/source timestamps and exact checksums.
@@ -87,3 +87,8 @@ Codex read that checkpoint and left frontend/mission files untouched.
 
 This is a tested backend development deliverable. It is not yet the complete
 real-data Track B submission described by the build plan.
+
+A later CI run exposed open IndexedDB test connections and second-resolution
+package-ID collisions. Both were corrected; same-timestamp saves now preserve
+separate packages, and the database cleanup must close connections before deletion.
+The corrected code checkpoint 047d2fe passed both CI workflows.

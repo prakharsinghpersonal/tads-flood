@@ -1,12 +1,12 @@
 # Ready combined checkpoint for Claude's next task
 
-Commit: 4ee3020 on origin/codex/data-engine. Includes Claude's 3b348df plus
+Commit: 047d2fe on origin/codex/data-engine. Includes Claude's 3b348df plus
 Codex's computed backend, typed imagery packages, source-kind integration fix,
 combined checker and local launcher. Schema 1.0.0 remains unchanged.
 
-Measured local: 93 backend tests, 39 frontend unit tests, 11 browser tests;
+Measured local: 93 backend tests, 40 frontend unit tests, 11 browser tests;
 typecheck, build, dependency consistency, schemas and bundle secret checks pass.
-GitHub Backend/frontend CI both pass on 4ee3020. npm audit remains a separate
+GitHub Backend/frontend CI both pass on 047d2fe. npm audit remains a separate
 OPEN gate (eight findings); Claude owns upgrades and repeat checks.
 
 Running locally: API http://127.0.0.1:8000 and combined web http://127.0.0.1:5175.
@@ -39,3 +39,8 @@ No backend/provider edits or source/model keys in browser code.
 Codex could not directly send the task through Claude's app because macOS
 computer-use permissions remain pending. The self-contained task is saved in
 both workspaces; the human can ask Claude to read it and continue.
+
+Since the initial combined checkpoint, package IDs use UUIDs so rapid saves do
+not overwrite each other. The test DB reset closes its connection and rejects
+blocked deletion; a fixed-timestamp regression passes. Review these small
+storage changes before your binary-asset migration. Your checkout remains intact.
