@@ -24,7 +24,7 @@ def main():
         for script in ["typecheck", "test", "build", "check:secrets"]:
             run(["npm", "run", script], ROOT / "apps/web")
         if args.browser:
-            run(["npm", "run", "test:e2e"], ROOT / "apps/web")
+            run([sys.executable, "scripts/check_integration.py", "--all-browser"])
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("Workspace check failed. Resolve the command above before releasing.", file=sys.stderr)
         return 1

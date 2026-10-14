@@ -53,9 +53,18 @@ The launcher reuses a compatible local API, strips server credential variables
 from the frontend process, and stops only its own processes on Ctrl-C. Run the
 combined checks with `python scripts/check_workspace.py --browser` after
 `cd apps/web && npx playwright install chromium` where a browser is not installed.
-The current UI supports the legacy API fixture and a separately labeled bundled
-geometry fixture. Wiring computed scene imagery/packages/copilot is Claude's
-next task; frontend dependency audit remediation remains open.
+The primary demo uses the computed synthetic scene with before/after radar
+previews, route/cut inspection, cited English/Nepali brief previews and exact-byte
+offline packages. The copilot calls the API and shows an explicit unavailable
+state when no model is configured. Nepali previews remain visibly unreviewed.
+The legacy API and bundled fixtures remain separate test options.
+
+`check_workspace.py --browser` starts a fresh temporary, credential-free API and
+runs the browser suite against it. The actual API flow must pass; it cannot skip
+because the API is missing. For that integration flow alone, run
+`python scripts/check_integration.py`. GitHub runs it in a separate integration
+workflow in addition to backend and frontend checks. The other browser flows
+use recorded synthetic responses or bundled fixtures.
 
 The generated OpenAPI and assessment schema live in `contracts/`. The synthetic
 starter response remains in `fixtures/synthetic/assessment.json`. The richer
@@ -78,6 +87,8 @@ See [the backend runtime handoff](docs/coordination/2026-10-13-backend-runtime.m
 for image coordinates, hashes, copilot and integration examples. The bilingual
 `/brief` endpoint is a deterministic preview; the `/copilot` endpoint calls the
 configured model to select approved facts. An absent key is an explicit error.
+The frontend lockfile audit currently reports zero vulnerabilities; this does
+not establish real-data accuracy or successful model execution.
 
 ## Working in parallel
 

@@ -96,3 +96,15 @@ OSM fragments, prompt-injection robustness against an actual model, real provide
 performance, required-case-study evaluation, holdout AOI execution and final
 delivery evidence remain pending or partial. Refer to the named test files rather
 than treating this list as a blanket pass for a whole acceptance group.
+
+## Combined checkpoint 2 evidence
+
+The independently checked combined workspace passes 93 backend tests, 61 frontend
+unit tests and 20 browser tests. The browser API flow uses a fresh actual FastAPI
+process and computed synthetic scene without interception; CI now requires it
+to run. It checks image decoding, deterministic brief, explicit missing-model
+state, server-hashed package save and offline image reload. Recorded-response
+flows cover image tampering, missing packages, facility/cut selection, UI errors,
+keyboard/layout and simulation separation. One screenshot-generation case is
+opt-in and skipped during the normal suite. See the integration record and
+CLAUDE_STATUS.md for scope; these counts do not close E01/E02 or the actual AI gate.

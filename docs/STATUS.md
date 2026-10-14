@@ -1,6 +1,7 @@
 # Codex status
 
-Ready combined code checkpoint: `047d2fe` on `codex/data-engine`; draft PR:
+Integrated Claude code checkpoint: `29ff6d1`, plus its status update `cf01ee1`,
+on `codex/data-engine`; draft PR:
 https://github.com/prakharsinghpersonal/tads-flood/pull/1.
 Planning and shared foundation are on main; computed backend work is on this
 branch. Assessment schema remains 1.0.0. See the runtime coordination note for
@@ -49,21 +50,28 @@ Claude's additive integration endpoints and the response to its proposal.
   were 583/603 px before the final grammar change. A4 CSS is provided, but this
   check does not certify every future dataset's export fits one page.
 
-Combined code checkpoint `047d2fe` passed GitHub [backend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38505439612)
-and [frontend CI](https://github.com/prakharsinghpersonal/tads-flood/actions/runs/38505439663).
-Codex independently ran 40 frontend unit tests and 11 browser tests after the
-integration provenance correction; typecheck/build/bundle secret checks passed.
-The combined launcher and same-origin UI proxy were checked against the running
-API, including typed packages, asset/source timestamps and exact checksums.
+Claude's second checkpoint connects the computed scene, actual PNG comparison,
+exact-byte binary offline packages, grounded copilot requests, readiness states
+and draft-labelled Nepali previews. Its pinned dependency audit reports **zero**
+findings. Codex independently ran the combined workspace check: **61 frontend
+unit tests and 20 browser tests passed**, alongside the 93 backend tests above.
+One opt-in screenshot-generation test was intentionally skipped. The API browser
+flow actually ran against a fresh FastAPI process, with temporary storage and
+no credentials: both images loaded, the package saved, and offline reload
+restored imagery. Other browser flows use recorded/bundled synthetic fixtures.
+Typecheck, production build and bundle secret checks passed.
 
-The first combined fixture check failed on synthetic source kinds; Codex fixed
-that mismatch in the integration branch and recorded the changed frontend paths.
-Claude's checkout/source branch was left untouched. Source audit still reports
-eight frontend dependency findings; functional CI does not close that separate
-release gate. Dependency updates and imagery/package/copilot consumer wiring
-are assigned in CLAUDE_NEXT.md.
-Claude owns its status and measured frontend results in its separate worktree;
-Codex read that checkpoint and left frontend/mission files untouched.
+The new API browser integration workflow requires that flow to execute: an
+unreachable API fails instead of skipping. `check_workspace.py --browser` also
+launches the fresh credential-free API. Details and cross-owner changes are in
+[the integration record](coordination/2026-10-14-checkpoint-2-integration.md).
+Claude's pushed ready code passed both existing GitHub workflows before merge;
+exact combined-head CI evidence is recorded with the integration commit/PR.
+
+Earlier provenance, UUID package IDs and closed test-database connections are
+retained. Claude's own worktree and status file were not modified by Codex.
+Frontend boundary-hardening and submission draft work are assigned in
+CLAUDE_NEXT.md; they are separate from real-data validation.
 
 ## Outstanding release gates
 
@@ -78,9 +86,9 @@ Codex read that checkpoint and left frontend/mission files untouched.
   are not demonstrated; no IoU/F1 figures can be reported yet.
 - Grounding/reference evaluation on real inputs, fluent Nepali review and final
   numerical/citation sample review are pending.
-- Claude's first ready commit 3b348df is integrated. Connect its next image/package/copilot
-  consumer changes, resolve dependency audit findings, run full release gates and
-  produce submission artifacts.
+- Claude's ready checkpoint 29ff6d1 and status cf01ee1 are integrated. Finish
+  the newly assigned frontend boundary cases and submission drafts, then produce
+  the final report/video from measured real runs where available.
 - Existing TADS research eligibility/permission remains an organizer question.
   This backend imports none of its datasets or experiment code. Flight hardware
   is unsupported; the separate frontend mission is a simulation.
