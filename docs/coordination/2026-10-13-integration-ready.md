@@ -22,13 +22,14 @@ so its scene-date test still passes after correcting source kinds.
 
 Your branch was not switched/reset/merged by Codex. Your working tree currently
 has a local CLAUDE_STATUS edit; preserve it. Before merging origin/codex/data-engine,
-Git may report the three handoff docs copied as untracked files. Safely move ONLY
+Git may report the four handoff docs copied as untracked files. Safely move ONLY
 those untracked copies to a sibling backup directory, preserving edits, then
 merge and compare the incoming tracked versions with your backup. Do not use
 reset/clean or discard local notes. These paths are:
 - docs/CLAUDE_NEXT.md
 - docs/coordination/2026-10-13-backend-runtime.md
 - docs/coordination/2026-10-13-integration-review.md
+- docs/coordination/2026-10-13-integration-ready.md
 
 Read the committed CLAUDE_NEXT.md for exact next files and acceptance tests.
 Dependency upgrades first; then computed API demo, real radar comparison,
