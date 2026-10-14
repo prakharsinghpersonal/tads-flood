@@ -42,6 +42,12 @@ export default function CopilotPanel({ assessmentId, ask, unavailable, onSelect 
     [],
   );
 
+  useEffect(() => {
+    seq.current++;
+    abort.current?.abort();
+    setState({ kind: 'idle' });
+  }, [lang]);
+
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
     const q = question.trim();

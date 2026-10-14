@@ -146,7 +146,7 @@ export default function App({ client: injected }: AppProps) {
       return {
         brief: (lang, signal) => client.getBrief(id, lang, signal, mode),
         reviewed: (lang, signal) => client.getReport(id, lang, signal, mode),
-        briefHtml: async (lang, signal) => new Blob([(await client.briefHtml(id, lang, signal)).bytes], { type: 'text/html' }),
+        briefHtml: async (lang, signal) => new Blob([(await client.briefHtml(id, lang, signal, mode)).bytes], { type: 'text/html' }),
         copilot: online ? (q, lang, signal) => client.askCopilot(id, q, lang, signal, mode) : null,
         copilotUnavailable: online ? null : 'The browser is offline. The copilot needs the API; cached briefs remain available.',
       };

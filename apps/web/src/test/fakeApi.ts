@@ -38,6 +38,10 @@ export const REPORT_EN = {
   limitations: ['Synthetic.'],
 };
 
+export function testBriefHtml(id = GEO_ID, mode = 'synthetic', language = 'en') {
+  return `<!doctype html><html lang="${language}"><head><meta name="tads-assessment-id" content="${id}"><meta name="tads-mode" content="${mode}"><meta name="tads-language" content="${language}"><title>Test brief</title></head><body>Test brief</body></html>`;
+}
+
 export async function packageManifest(overrides: { beforeSha?: string } = {}) {
   return {
     ...RECORDED_PACKAGE,
@@ -66,7 +70,7 @@ export async function geographicApi(extra?: Router) {
     if (url === `/api/v1/assessments/${GEO_ID}/imagery/after`) return { status: 200, bytes: PNG.after_radar, contentType: 'image/png' };
     if (url.startsWith(`/api/v1/assessments/${GEO_ID}/brief?language=en&format=json`)) return { status: 200, body: BRIEF_EN };
     if (url.startsWith(`/api/v1/assessments/${GEO_ID}/brief?language=ne&format=json`)) return { status: 200, body: BRIEF_NE };
-    if (url.includes('/brief?') && url.includes('format=html')) return { status: 200, bytes: new TextEncoder().encode('<!doctype html><title>brief</title>'), contentType: 'text/html' };
+    if (url.includes('/brief?') && url.includes('format=html')) return { status: 200, bytes: new TextEncoder().encode(testBriefHtml(GEO_ID, 'synthetic', url.includes('language=ne') ? 'ne' : 'en')), contentType: 'text/html' };
     if (url === `/api/v1/assessments/${GEO_ID}/report?language=en`) return { status: 200, body: REPORT_EN };
     if (url === `/api/v1/assessments/${GEO_ID}/report?language=ne`) return err(501, 'language_not_ready', 'Reviewed Nepali/AI generation is not implemented.');
     if (url === `/api/v1/assessments/${GEO_ID}/copilot`) return err(503, 'ai_not_configured', 'Configure a server-side model, endpoint and API key.');

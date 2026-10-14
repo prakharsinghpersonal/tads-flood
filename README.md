@@ -10,7 +10,7 @@ authenticated Sentinel-1/DEM and historical ohsome runs completed for Syapru Bes
 and a separate Timure area/date. Local llama3.1:8b answered English/Nepali queries
 by selecting approved computed facts. The EMSR927 AOI01 landslide comparison is
 poor (IoU 0.0057; F1 0.0114 over jointly valid cells). This is an unvalidated
-flood/disturbance baseline, not operational disaster mapping. Frontend hardening,
+flood/disturbance baseline, not operational disaster mapping. Final recorded-case UI QA,
 fluent Nepali review, the final demo and human submission remain open.
 
 ## Start here

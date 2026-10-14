@@ -6,11 +6,12 @@ The human owns final Devpost submission. Deadline recorded in BUILD_PLAN:
 
 ## Repository and runtime
 - [x] Public GitHub repository created; implementation on codex/data-engine.
-- [x] Integrated Claude checkpoints 29ff6d1/cf01ee1; new Claude pass pending.
+- [x] Integrated Claude 830eec8 plus Codex HTML/metadata/language review fixes.
 - [x] Local real CDSE/historical OSM execution and actual local AI demonstrated.
 - [x] Required case comparison completed with poor results disclosed.
 - [x] Separate area/date executes; no held-out accuracy claimed.
-- [ ] Final Claude P0/UI integration, final combined tests and exact-head CI.
+- [x] Combined local checks: 110 backend, 130 frontend, 21 browser; hosted replay passes.
+- [ ] Final recorded-case UI QA, any resulting integration and exact-head CI.
 - [ ] Final README/default-branch release choice verified against submission link.
 
 ## Artifacts

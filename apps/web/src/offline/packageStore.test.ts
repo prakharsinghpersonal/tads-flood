@@ -4,7 +4,7 @@ import { parseAssessment } from '../api/contract';
 import { loadBundledFixture } from '../components/PreparePanel';
 import { sha256Bytes } from '../domain/scenes';
 import { createSim, step } from '../mission/sim';
-import { BRIEF_EN, PNG, SNAPSHOT, SNAPSHOT_BYTES, geographicApi } from '../test/fakeApi';
+import { BRIEF_EN, PNG, SNAPSHOT, SNAPSHOT_BYTES, geographicApi, testBriefHtml } from '../test/fakeApi';
 import {
   LEGACY_MANIFEST_VERSION,
   MANIFEST_VERSION,
@@ -47,6 +47,35 @@ function blobBytes(blob: Blob): Promise<Uint8Array> {
 }
 
 describe('offline package store (browser-package-2)', () => {
+  it('rejects wrong-scope HTML before saving and after a re-hashed alteration', async () => {
+    const foreign = new TextEncoder().encode(testBriefHtml('another-area'));
+    const bad = await geographicApi((url) => url.includes('language=en&format=html') ? { status: 200, bytes: foreign, contentType: 'text/html' } : undefined);
+    await expect(createPackage(apiLoaded, createClient({ fetchImpl: bad.fetchImpl }))).rejects.toThrow(/HTML brief assessment/);
+    expect(await listPackages()).toEqual([]);
+    const good = await geographicApi();
+    const manifest = await createPackage(apiLoaded, createClient({ fetchImpl: good.fetchImpl }));
+    const d = await db();
+    const key = `${manifest.package_id}/brief-html-en`;
+    const row = (await d.get('assets', key))!;
+    const asset = manifest.assets.find((a) => a.asset_id === 'brief-html-en')!;
+    asset.bytes = foreign.byteLength;
+    asset.sha256 = await sha256Bytes(foreign);
+    await d.put('assets', { ...row, bytes: foreign.buffer });
+    await d.put('manifests', manifest);
+    await expect(openPackage(manifest.package_id)).rejects.toThrow(/HTML brief assessment/);
+  });
+
+  it.each(['aoi', 'event_date', 'scene_times', 'docs'] as const)('rejects inconsistent cached %s metadata', async (field) => {
+    const { fetchImpl } = await geographicApi();
+    const manifest = await createPackage(apiLoaded, createClient({ fetchImpl }));
+    if (field === 'aoi') manifest.aoi[0] += 1;
+    if (field === 'event_date') manifest.event_date = '2000-01-01';
+    if (field === 'scene_times') manifest.scene_times[0].acquired_at = '2000-01-01T00:00:00Z';
+    if (field === 'docs') manifest.docs = manifest.docs.filter((s) => s.doc_id !== 'brief-html-en');
+    await (await db()).put('manifests', manifest);
+    await expect(openPackage(manifest.package_id)).rejects.toThrow(PackageIntegrityError);
+  });
+
   it('stores the exact backend snapshot: its bytes differ from JS serialisation but pass the server hash', async () => {
     expect(new TextEncoder().encode(JSON.stringify(SNAPSHOT))).not.toEqual(SNAPSHOT_BYTES);
     const { fetchImpl, pkg } = await geographicApi();

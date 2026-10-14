@@ -18,6 +18,7 @@ import {
   type Readiness,
   type Report,
 } from './contract';
+import { checkBriefHtmlScope } from './briefHtml';
 
 export type ApiErrorKind = 'network' | 'http' | 'invalid_response' | 'unsupported_version' | 'cancelled' | 'timeout';
 
@@ -218,8 +219,14 @@ export function createClient({ fetchImpl, timeoutMs = 20_000, copilotTimeoutMs =
       return { value: r.data, received_at: now() };
     },
     // Backend-rendered printable brief (exact bytes, for download/print).
-    async briefHtml(id: string, language: 'en' | 'ne', signal?: AbortSignal) {
-      return bytes(`/api/v1/assessments/${encodeURIComponent(id)}/brief?language=${language}&format=html`, signal);
+    async briefHtml(id: string, language: 'en' | 'ne', signal?: AbortSignal, mode?: Assessment['mode']) {
+      const result = await bytes(`/api/v1/assessments/${encodeURIComponent(id)}/brief?language=${language}&format=html`, signal);
+      try {
+        checkBriefHtmlScope(result.bytes, { assessment_id: id, language, mode });
+      } catch (err) {
+        throw new ApiError('invalid_response', (err as Error).message);
+      }
+      return result;
     },
     async askCopilot(id: string, question: string, language: Lang, signal?: AbortSignal, mode?: Assessment['mode']): Promise<Received<GroundedReport>> {
       const body = await request(

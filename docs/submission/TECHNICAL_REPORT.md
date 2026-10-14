@@ -6,7 +6,7 @@ Measured sources and evaluation; language/UI/human submission checks remain open
 
 TADS Flood is an evidence-led flood-exposure workspace for Track B. It connects an area/date request to satellite acquisition, candidate change masks, historical infrastructure, mapped road access and a cited situation brief. A separate TADS-inspired inspection simulation explores offline planning; it is not a real drone or rescue system.
 
-The Python/FastAPI service and React/TypeScript/MapLibre interface support real authenticated source execution, metric exposure and topology, persistent bounded jobs, before/after imagery, source inspection, bilingual model-selected facts and exact-byte offline packages. The system executes as an educational prototype. Mapping quality is weak on the measured landslide reference; fluent Nepali review and the final UI pass remain open.
+The Python/FastAPI service and React/TypeScript/MapLibre interface support real authenticated source execution, metric exposure and topology, persistent bounded jobs, before/after imagery, source inspection, bilingual model-selected facts and exact-byte offline packages. The system executes as an educational prototype. Mapping quality is weak on the measured landslide reference; fluent Nepali review and final recorded-case UI QA remain open.
 
 The main decision chain is satellite candidate change -> exposed road -> baseline/post-event facility route -> settlement status -> cited brief. Every result carries scope, mode, source IDs, acquisition time, method and limits. Candidate exposure never becomes a claim of confirmed destruction or a safe route.
 
@@ -96,7 +96,7 @@ This prototype cannot predict sudden glacier collapse, verify closures, detect s
 
 One persistent API process provides two workers and eight queued jobs. SQLite/cache requires writable storage. Docker configuration is prepared but unbuilt because the local daemon is unavailable. The optional Vercel site serves synthetic replay; public live processing/model execution needs a separate API host. Neither profile is called deployed without a domain check.
 
-Measured draft checks: 110 backend tests, 61 frontend tests and 20 browser tests pass, with one opt-in storyboard case skipped. Contracts, dependencies, build/typecheck and bundle secret checks pass. Hosted replay hashes/errors and its browser/offline flow also pass locally. Claude owns the pending frontend hardening/polish pass.
+Measured draft checks: 110 backend tests, 130 frontend tests and 21 browser tests pass, with one opt-in storyboard case skipped. Contracts, dependencies, build/typecheck and bundle secret checks pass. Hosted replay hashes/errors and its browser/offline flow also pass locally. Claude owns the final recorded-real-case UI QA pass.
 
 Reproduce using requirements.lock, the editable Python package, npm ci --prefix apps/web and scripts/dev.py. run_assessment.py executes real scopes; evaluate_reference.py checks independent CEMS data; check_local_ai.py calls the actual local model; check_workspace.py --browser isolates engineering tests from operator credentials.
 

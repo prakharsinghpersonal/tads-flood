@@ -136,8 +136,8 @@
   },
   "engineering_checks": {
     "backend_tests": 110,
-    "frontend_tests": 61,
-    "browser_tests": 20,
+    "frontend_tests": 130,
+    "browser_tests": 21,
     "storyboard_skipped": 1,
     "contracts_reproduced": true,
     "frontend_audit_findings": 0,
@@ -157,7 +157,7 @@
     "scope": "small development sample; not a model benchmark"
   },
   "pending": [
-    "Claude UI hardening/integration",
+    "Claude final recorded-case UI QA",
     "fluent Nepali review",
     "final video",
     "human eligibility/submission",

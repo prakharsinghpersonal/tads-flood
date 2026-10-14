@@ -2,6 +2,7 @@
 // including the body read, and leave no timers or listeners behind.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, createClient } from './client';
+import { GEO_ID, testBriefHtml } from '../test/fakeApi';
 
 // A fetch double that behaves like the platform: rejects when its signal aborts
 // and errors its body stream on abort.
@@ -32,6 +33,12 @@ afterEach(() => {
 });
 
 describe('client exchange deadlines (T03/T04/T05)', () => {
+  it('HTML export rejects a successful response from another scope', async () => {
+    const reply = (html: string) => vi.fn(async () => new Response(html, { status: 200, headers: { 'content-type': 'text/html' } })) as unknown as typeof fetch;
+    await expect(createClient({ fetchImpl: reply(testBriefHtml()) }).briefHtml(GEO_ID, 'en', undefined, 'synthetic')).resolves.toBeTruthy();
+    await expect(createClient({ fetchImpl: reply(testBriefHtml('another-area')) }).briefHtml(GEO_ID, 'en', undefined, 'synthetic')).rejects.toMatchObject({ kind: 'invalid_response' });
+    await expect(createClient({ fetchImpl: reply(testBriefHtml(GEO_ID, 'live')) }).briefHtml(GEO_ID, 'en', undefined, 'synthetic')).rejects.toMatchObject({ kind: 'invalid_response' });
+  });
   it('T03: headers then a stalled JSON body hits the deadline with a readable error', async () => {
     const { impl, seen } = signalAwareFetch((signal) => ({ stream: stalledBody(signal) }));
     const client = createClient({ fetchImpl: impl, timeoutMs: 50 });

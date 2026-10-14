@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { createClient } from './api/client';
 import uiFixture from './fixtures/synthetic-ui-assessment.json';
-import { GEO_ID, SNAPSHOT, geographicApi, type Router } from './test/fakeApi';
+import { GEO_ID, SNAPSHOT, geographicApi, testBriefHtml, type Router } from './test/fakeApi';
 import { resetDbForTests } from './offline/packageStore';
 
 // MapLibre needs WebGL, which jsdom lacks. The stub records what the map was
@@ -439,6 +439,20 @@ describe('brief and copilot', () => {
     expect(pending.init!.signal!.aborted).toBe(true);
   });
 
+  it('T10: changing the copilot language aborts the pending answer', async () => {
+    const { user, calls } = await toReport((url, init) =>
+      url.endsWith('/copilot') ? new Promise((_, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))) : undefined,
+    );
+    await user.type(await screen.findByRole('textbox', { name: 'Question' }), 'Which settlements?');
+    await user.click(screen.getByRole('button', { name: 'Ask' }));
+    await screen.findByText(/Asking about/);
+    const pending = calls.find((c) => c.url.endsWith('/copilot'))!;
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Answer language' }), 'ne');
+    expect(pending.init!.signal!.aborted).toBe(true);
+    expect(screen.queryByText(/Asking about/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled();
+  });
+
   it('T10: an HTML export pending when the language changes is never downloaded', async () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
@@ -446,7 +460,7 @@ describe('brief and copilot', () => {
     const { user } = await toReport(async (url) => {
       if (!url.includes('format=html')) return undefined;
       await gate;
-      return { status: 200, bytes: new TextEncoder().encode('<!doctype html><title>old</title>'), contentType: 'text/html' };
+      return { status: 200, bytes: new TextEncoder().encode(testBriefHtml()), contentType: 'text/html' };
     });
     await screen.findByTestId('report');
     await user.click(screen.getByRole('button', { name: 'Download brief (HTML)' }));

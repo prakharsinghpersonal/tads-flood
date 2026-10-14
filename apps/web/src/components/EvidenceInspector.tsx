@@ -102,7 +102,7 @@ export default function EvidenceInspector({ loaded, selection, reviewed, onToggl
                   ? `The usual route crosses ${cutPhrase}, but another mapped route to ${after ?? 'a facility'} remains. That route is not verified as passable or safe.`
                   : `A mapped route to ${after ?? 'a facility'} remains with no candidate exposure. That is not a safety assessment.`)}
               {s.status === 'preexisting_disconnected' && 'No mapped route existed before the event. This is a map gap or a pre-existing condition, not flood impact.'}
-              {s.status === 'unknown_network' && 'The settlement could not be placed on the road network. Road access is unknown; do not treat it as safe.'}
+              {s.status === 'unknown_network' && 'Coverage or mapped connectivity is incomplete. Current facility access is unknown; do not treat it as safe.'}
             </p>
           </div>
           <dl className="kv">

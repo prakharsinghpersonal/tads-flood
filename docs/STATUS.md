@@ -2,8 +2,9 @@
 
 Implementation branch: `codex/data-engine`; draft PR:
 https://github.com/prakharsinghpersonal/tads-flood/pull/1.
-Claude checkpoints `29ff6d1`/`cf01ee1` are integrated. Claude's current UI
-reliability/polish edits remain in its own worktree and are not yet integrated.
+Claude checkpoints `29ff6d1`/`cf01ee1` and ready `830eec8` are integrated.
+Codex's review additionally guards HTML exports, cached scope metadata and
+copilot language changes. Claude has a separate final recorded-case QA task.
 Schema is 1.0.0; pipeline is flood-assessment-v1.4; radar method remains
 sar-change-baseline-v1. No threshold tuning used the official reference.
 
@@ -57,12 +58,12 @@ mappings. They must be labelled recordings rather than new live execution.
 ## Measured engineering checks
 
 Latest backend check: 110 passed, one upstream Starlette/httpx warning.
-Latest combined UI checkpoint: 61 frontend tests and 20 browser tests passed,
+Latest combined UI checkpoint: 130 frontend tests and 21 browser tests passed,
 with one opt-in storyboard test skipped. Actual API browser integration runs
 against fresh credential-free FastAPI and cannot skip. Other browser checks use
 recorded/bundled synthetic inputs. Contract reproduction, dependency check,
 typecheck/build and bundle secret checks passed. Hosted synthetic replay hashes,
-errors and an actual HTTP browser/offline flow passed locally. New Claude edits
+errors and an actual HTTP browser/offline flow passed locally. Any new Claude QA changes
 must receive their own final checks and independent integration review.
 
 Six-page technical report draft and English/Nepali one-page briefs were rendered,
@@ -71,8 +72,8 @@ scripts and source Markdown are included; output PDFs are ignored release files.
 
 ## Outstanding gates
 
-1. Finish/integrate Claude's path/body-timeout/cancellation/scope/storage tests and
-   focused UI pass; rerun combined suites and exact-head CI.
+1. Finish Claude's final recorded-real-case UI QA and labelled screenshots;
+   review any resulting changes and exact-head CI. P0 boundary cases pass locally.
 2. Fluent Nepali review with explicit signoff, or preserve DRAFT disclosure.
 3. Final three-minute recording and public/unlisted video link.
 4. Human registration/student eligibility/team names and research disclosure;

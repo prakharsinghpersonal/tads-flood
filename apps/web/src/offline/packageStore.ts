@@ -5,6 +5,7 @@
 // state lives in a separate store so it can never overwrite the assessment.
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { ApiError, checkReportScope, type ApiClient, type Received } from '../api/client';
+import { checkBriefHtmlScope } from '../api/briefHtml';
 import {
   GroundedReportSchema,
   ReportSchema,
@@ -176,7 +177,11 @@ const docLanguage = (id: DocId): 'en' | 'ne' => (id.endsWith('-ne') ? 'ne' : 'en
 function validateDoc(doc_id: DocId, bytes: ArrayBuffer, scope: { assessment_id: string; mode: string }): GroundedReport | Report | null {
   const text = decoder.decode(bytes);
   if (doc_id.startsWith('brief-html')) {
-    if (!/<html|<!doctype html/i.test(text)) throw new PackageIntegrityError(`${doc_id} is not an HTML document.`);
+    try {
+      checkBriefHtmlScope(bytes, { assessment_id: scope.assessment_id, mode: scope.mode as 'live' | 'synthetic', language: docLanguage(doc_id) });
+    } catch (err) {
+      throw new PackageIntegrityError(`${doc_id}: ${(err as Error).message}`);
+    }
     return null;
   }
   let value: unknown;
@@ -514,6 +519,17 @@ async function verifyPackage(m: PackageManifest, bytes: Record<string, ArrayBuff
   if (a.assessment_id !== m.assessment_id || a.mode !== m.assessment_mode || a.schema_version !== m.schema_version) {
     throw refuse('Manifest assessment ID, mode or schema disagrees with the cached snapshot.');
   }
+  if (JSON.stringify(m.aoi) !== JSON.stringify(a.bbox) || m.event_date !== a.event_date) {
+    throw refuse('Manifest area or date disagrees with the cached snapshot.');
+  }
+  const times = a.sources.map((s) => ({ source_id: s.source_id, kind: s.kind, acquired_at: s.acquired_at }));
+  // Older v1 packages may lack the source register. If supplied, it must match.
+  if (m.migrated_from === null || m.scene_times.length > 0) {
+    const sorted = (rows: Array<{ source_id: string; kind: string; acquired_at: string }>) => [...rows].sort((x, y) => x.source_id.localeCompare(y.source_id));
+    if (JSON.stringify(sorted(m.scene_times)) !== JSON.stringify(sorted(times))) {
+      throw refuse('Manifest source times disagree with the cached snapshot.');
+    }
+  }
   const rasters = m.assets.filter((x) => x.raster);
   for (const x of rasters) {
     const r = x.raster!;
@@ -522,6 +538,15 @@ async function verifyPackage(m: PackageManifest, bytes: Record<string, ArrayBuff
     if (problem) throw refuse(problem);
   }
   const docs: Partial<Record<DocId, GroundedReport | Report | null>> = {};
+  if (m.docs.length !== Object.keys(DOC_PATHS).length || new Set(m.docs.map((s) => s.doc_id)).size !== m.docs.length || m.docs.some((s) => !Object.hasOwn(DOC_PATHS, s.doc_id))) {
+    throw refuse('Package lists missing, duplicate or unsupported documents.');
+  }
+  const allowedAssets = new Set(['assessment', ...RASTER_ROLES, ...Object.keys(DOC_PATHS)]);
+  for (const asset of m.assets) {
+    if (!allowedAssets.has(asset.asset_id) || (RASTER_ROLES.has(asset.asset_id) && !asset.raster)) {
+      throw refuse(`Asset ${asset.asset_id} has unsupported or missing role metadata.`);
+    }
+  }
   for (const st of m.docs) {
     const b = bytes[st.doc_id];
     if (st.status === 'cached' && !b) throw refuse(`${st.doc_id} is marked cached but missing.`);

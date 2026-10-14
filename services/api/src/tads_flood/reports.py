@@ -36,6 +36,9 @@ def render_brief(assessment, report):
     warning_rows = "".join("<li>" + escape(text) + "</li>" for text in limits)
     credits = " ".join(escape(text) for text in attributions(assessment))
     return f'''<!doctype html><html lang="{report['language']}"><head><meta charset="utf-8">
+<meta name="tads-assessment-id" content="{escape(assessment.assessment_id, quote=True)}">
+<meta name="tads-mode" content="{escape(assessment.mode, quote=True)}">
+<meta name="tads-language" content="{escape(report['language'], quote=True)}">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>TADS Flood — {title}</title>
 <style>body{{font:13px/1.45 system-ui,sans-serif;color:#183129;max-width:760px;margin:30px auto;padding:20px}}
 h1{{font-size:25px;margin:0}}h2{{font-size:15px;margin:20px 0 6px}}li{{margin:6px 0;overflow-wrap:anywhere}}
