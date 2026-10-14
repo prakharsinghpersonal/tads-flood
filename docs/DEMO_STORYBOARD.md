@@ -37,3 +37,36 @@ Synthetic scene only (no credentialed Sentinel/OSM run yet), no configured AI
 model, Nepali text unreviewed, raster previews are VV dB renderings for
 inspection rather than analysis products, and road passability is never
 established by the graph.
+
+## Recorded real-mode frames (Syapru Besi, 26 Aug 2026)
+
+These are **recorded real-mode output** from the immutable assessment
+`live-c9157aa9850da3ddb9bb20f2`, served byte-for-byte from the hashed recordings
+by the opt-in `tests/e2e/recorded-live.spec.ts`. No new satellite, OSM or model
+call happened when they were captured. The only constructed piece is the
+completed-job wrapper used to enter the UI. These frames show UI state; they
+are not new geographic validation.
+
+| Frame | Shows | Caption to use |
+|---|---|---|
+| `11-recorded-live-overview.png` | LIVE badge, after-event Sentinel-1 radar (2026-08-28; before 2026-08-16), 42% coverage line, 0 potentially isolated vs 2 unknown network, "no hospital or clinic mapped" notice, Copernicus/OSM attribution | "Recorded real-mode output. Zero predicted isolation does not mean roads are safe: two settlements have unknown access and only 41.8% of the grid is valid." |
+| `12-recorded-live-evidence.png` | Unknown-access settlement in the inspector: "do not treat it as safe", evidence `network-001` from the historical OSM snapshot with its acquisition date | "Recorded real-mode output. Unknown access is shown as unknown, with its source and date." |
+| `13-recorded-live-brief.png` | English brief, *Deterministic template — not AI*, LIVE | "Recorded real-mode brief. Quantities come from the saved computation." |
+
+Keep this real unknown-access case separate from the synthetic road-cut frames
+04–06. The real run has **no** isolation route to show. The official landslide
+comparison is poor (IoU 0.0057, F1 0.0114); say so and make no damage-map claim.
+
+## Rehearsal of `../tads-flood-handoff/DEMO_SCRIPT.md` (UI actions only)
+
+| Time | Action in the UI | Rehearsed? | Note |
+|---|---|---|---|
+| 0:00–0:15 | Open Syapru Besi (Run assessment with the case bbox/date, live mode) | yes (recorded replay) | Live recording needs the local stack or the replay; label which one |
+| 0:15–0:40 | Radar control Before/After; open a scene source | yes | Dates 2026-08-16 / 2026-08-28 visible on the control; long scene IDs now wrap |
+| 0:40–1:05 | Summary 11 exposed, 0 isolated, 2 unknown; open an unknown settlement | yes | Summary shows **42%** (rounded); brief says 41.8%. Say "41.8%" aloud |
+| 1:05–1:25 | Evidence, then Report tab, English brief | yes | |
+| 1:25–1:50 | Ask local copilot; switch to Nepali | **not rehearsed** | Recordings have no original question, so no replay; needs the live local model (~44 s cold; warm it first; Cancel is available) |
+| 1:50–2:05 | Casualty question refused | **not rehearsed** | Needs the live local model |
+| 2:05–2:25 | Switch to SYNTHETIC computed demo; save/reload offline | yes (frames 02–10) | SYNTHETIC banner makes the switch obvious |
+| 2:25–2:50 | Reference metrics / Timure evidence | n/a in UI | Shown from Codex's report material, not the app |
+| 2:50–3:00 | Limitations | yes | Method notes (9) under the summary |

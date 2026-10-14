@@ -302,3 +302,8 @@ details.more > summary { font-size: 0.85rem; color: var(--muted); }
   button.cite { color: #000; text-decoration: none; }
   .tag-draft { border: 2px solid #000; }
 }
+
+/* Final QA: long Sentinel product IDs wrapped instead of clipping the sidebar. */
+.scene-list button.link,
+.source-list button.link,
+.kv dd button.link { overflow-wrap: anywhere; word-break: break-all; text-align: left; }

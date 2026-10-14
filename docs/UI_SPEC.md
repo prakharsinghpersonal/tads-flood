@@ -185,3 +185,12 @@ hover-only; reduced-motion disables animation and map fly-to easing.
 - **Simulation.** Collapsed under "Simulated inspection (optional)" and off the
   map until opened. Internet and radio badges sit side by side. Telemetry shows
   observed time and received time.
+
+## Final UI QA (recorded real case)
+
+- Opt-in `tests/e2e/recorded-live.spec.ts` replays the hashed Syapru Besi
+  recordings (`TADS_LIVE_UI_RECORDING_DIR`). Each file must match its manifest
+  hash and length. Unrecorded routes return a 404 envelope. The completed-job
+  POST wrapper is the only constructed response.
+- `PW_PORT` selects the Playwright preview port (default 4173).
+- CSS fix: long scene and source IDs wrap instead of clipping the sidebar.

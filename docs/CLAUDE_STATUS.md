@@ -2,12 +2,80 @@
 
 Branch `claude/mission-ui`, worktree `tads-flood-claude`.
 
+## Final UI QA pass (2026-10-14, recorded real case)
+
+Base: `830eec8` plus the uncommitted checkpoint-3 hash note (preserved). I did
+not merge `origin/codex/data-engine` (`dc7e9db`, `12de69e`), as the handoff
+asked: no merging through dirty work. **Ready commit: recorded by the human
+after committing.** Not edited: `api/**`, `offline/packageStore*`,
+`App.tsx`/`App.test.tsx`, backend, contracts, scripts, deployment and
+submission files. No recording files were committed.
+
+**Recorded real-mode check** (`tests/e2e/recorded-live.spec.ts`, opt-in via
+`TADS_LIVE_UI_RECORDING_DIR`, skipped otherwise): 15 GET routes are served
+from the original bytes, each verified against the manifest hash and length.
+The only constructed response is the POST completed-job wrapper. Verified:
+- **Provenance:** LIVE badge, no synthetic banner, Copernicus/DEM/OSM
+  attribution.
+- **Radar:** both recorded PNGs decoded at the manifest corners; dates
+  2026-08-16 and 2026-08-28 on the map control and scene list.
+- **Quantities and wording:** 0 potentially isolated, 2 unknown network,
+  11 exposed; "unknown, not safe" wording; no isolated group shown.
+- **Evidence scope:** an unknown-access settlement's evidence and source
+  links stay within this assessment's sources.
+- **Brief:** the English brief says 41.8% and is labelled template; reviewed
+  Nepali shows 501 "not ready"; the Nepali DRAFT badge persists in print.
+- **Offline:** saved with snapshot `c96e0101…` and PNGs `8f17afcf…` /
+  `94322bd5…`; after an offline reload it is still LIVE, on the cached
+  channel, with both images decoded.
+- **Viewports and keyboard:** 320/768/1440px with no horizontal overflow; the
+  keyboard path (settlement → focused inspector → Esc → radar Before) completes.
+
+Frames 11–13 were captured from this case.
+
+| Command (apps/web) | Result |
+|---|---|
+| typecheck | pass |
+| `npm test` | 116 passed |
+| build | pass |
+| check:secrets | pass (40 files) |
+| `npm audit` | 0 vulnerabilities |
+| `PW_PORT=4180 npm run test:e2e` | 20 passed, 5 skipped (4 recorded opt-in + storyboard), **1 failed**: `api-live.spec.ts` hit Codex's long-running :8000, which now reports `ai_configured: true`; the copilot step waited on a real local model beyond the 5 s expectation. Environmental, not a UI regression; assertions not weakened |
+| `.venv/bin/python scripts/check_integration.py` | **1 passed** (fresh credential-free API, `REQUIRE_LOCAL_API=1`, no interception) |
+| `PW_PORT=4180 TADS_LIVE_UI_RECORDING_DIR=… npm run test:e2e -- recorded-live.spec.ts` | **4 passed** |
+
+**Data sources by check:**
+- Actual local API: the integration runner.
+- Recorded real case: the opt-in spec.
+- Synthetic recordings or bundled fixture: the other browser specs.
+- Mocked: unit tests.
+
+**Copilot replay skipped.** The recordings do not include the original
+question, so no answer is replayed, and no recorded answer is ever served for
+another question.
+
+**Fixed (styles.css):** long Sentinel scene and source IDs clipped the sidebar;
+they now wrap.
+
+**Defects recorded for review (not fixed, component owners):**
+1. The summary rounds coverage to "42%" while the brief says 41.8%
+   (`AssessmentPanel`). Show one decimal.
+2. At 320px MapLibre's compact attribution opens expanded and covers part of
+   the map until dismissed (`MapView`).
+3. In the default suite, `api-live.spec.ts` against a model-configured server
+   needs a longer copilot expectation, or should run only through the runner.
+
+**Not claimed:** submission readiness. Still open: the fluent Nepali review,
+the final video upload, optional deployment, and human eligibility and
+submission.
+
+---
+
 ## Checkpoint 3 (2026-10-14): reliability T01–T10 and focused UI
 
 Base: fast-forward to `d76b8fd` (`origin/codex/data-engine`, includes `29ff6d1`
-and `cf01ee1`); the tree was clean, nothing was reset or discarded. **Commit
-hash: recorded by the human after committing** (Claude does not run git
-commit/push here). No Codex-owned file was edited: not `scripts/`, `services/`,
+and `cf01ee1`); the tree was clean, nothing was reset or discarded. **Ready
+commit `830eec8`** (pushed to `origin/claude/mission-ui` by the human). No Codex-owned file was edited: not `scripts/`, `services/`,
 `apps/web/vercel.json`, `apps/web/api`, `public/submission` or `docs/submission`.
 `CLAUDE_NEXT.md`'s P1 submission drafts were not written; the newer ownership
 note assigns `docs/submission` to Codex. The `--hosted-replay` check named in
