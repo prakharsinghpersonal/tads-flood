@@ -1,0 +1,924 @@
+{
+  "schema_version": "1.0.0",
+  "assessment_id": "synthetic-ui-geometry-001",
+  "mode": "synthetic",
+  "event_date": "2026-08-26",
+  "bbox": [
+    85.25,
+    27.85,
+    85.27,
+    27.87
+  ],
+  "generated_at": "2026-10-13T12:00:00Z",
+  "sources": [
+    {
+      "source_id": "synthetic-graph-ui-001",
+      "kind": "synthetic",
+      "acquired_at": "2026-08-25T12:00:00Z",
+      "uri": "synthetic://synthetic-graph-ui-001",
+      "license": "MIT; original synthetic fixture (invented road graph and assets)",
+      "sha256": "5dc0e19b3a1006391eda6f8006c8dd4c34f6df496378001517cce185e45dc699",
+      "usage": "input"
+    },
+    {
+      "source_id": "synthetic-s1-before",
+      "kind": "sentinel_1",
+      "acquired_at": "2026-08-14T00:21:00Z",
+      "uri": "synthetic://synthetic-s1-before",
+      "license": "MIT; original synthetic fixture (stand-in for a pre-event radar scene; no Copernicus data)",
+      "sha256": "8ea53affc6005d7dab2fabaa8c46f4d69404b8f0d293bb073bb26f0511cc7c38",
+      "usage": "input"
+    },
+    {
+      "source_id": "synthetic-s1-after",
+      "kind": "sentinel_1",
+      "acquired_at": "2026-08-26T00:21:00Z",
+      "uri": "synthetic://synthetic-s1-after",
+      "license": "MIT; original synthetic fixture (stand-in for a post-event radar scene; no Copernicus data)",
+      "sha256": "a9a02ce57c1e8629e5a3052ed4cbd9db8703e6620a41883d828dbf66cb5977ac",
+      "usage": "input"
+    }
+  ],
+  "quality": {
+    "status": "partial",
+    "valid_fraction": 0.93,
+    "warnings": [
+      "Synthetic UI fixture. Geometry, scenes and scores are invented for interface tests.",
+      "7% of the AOI is marked no-data to exercise unknown coverage."
+    ],
+    "method_version": "synthetic-ui-v1"
+  },
+  "summary": {
+    "candidate_flood_area_m2": 743266,
+    "exposed_asset_count": 4,
+    "potentially_isolated_count": 1,
+    "unknown_network_count": 1
+  },
+  "layers": {
+    "flood": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": "flood-001",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.2578,
+                  27.85
+                ],
+                [
+                  85.2602,
+                  27.85
+                ],
+                [
+                  85.2618,
+                  27.856
+                ],
+                [
+                  85.2624,
+                  27.862
+                ],
+                [
+                  85.2612,
+                  27.87
+                ],
+                [
+                  85.2588,
+                  27.87
+                ],
+                [
+                  85.2592,
+                  27.862
+                ],
+                [
+                  85.2584,
+                  27.856
+                ],
+                [
+                  85.2578,
+                  27.85
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "flood-001",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-s1-after",
+            "status": "candidate_flood",
+            "flood_score": 0.82,
+            "evidence_ids": [
+              "synthetic-flood-001"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "flood-002",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.2622,
+                  27.8548
+                ],
+                [
+                  85.2652,
+                  27.8552
+                ],
+                [
+                  85.2656,
+                  27.8578
+                ],
+                [
+                  85.2628,
+                  27.8582
+                ],
+                [
+                  85.2622,
+                  27.8548
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "flood-002",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-s1-after",
+            "status": "candidate_flood",
+            "flood_score": 0.57,
+            "evidence_ids": [
+              "synthetic-flood-001"
+            ]
+          }
+        }
+      ]
+    },
+    "debris": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": "debris-001",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.2596,
+                  27.8612
+                ],
+                [
+                  85.2606,
+                  27.8612
+                ],
+                [
+                  85.2606,
+                  27.8628
+                ],
+                [
+                  85.2596,
+                  27.8628
+                ],
+                [
+                  85.2596,
+                  27.8612
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "debris-001",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-s1-after",
+            "status": "candidate_disturbance",
+            "evidence_ids": [
+              "synthetic-debris-001"
+            ]
+          }
+        }
+      ]
+    },
+    "roads": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": "road-a",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.253,
+                27.858
+              ],
+              [
+                85.2558,
+                27.8601
+              ],
+              [
+                85.2585,
+                27.862
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "road-a",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "road-a",
+            "candidate_blocked": false,
+            "status": "not_exposed",
+            "length_m": 699.1,
+            "evidence_ids": []
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "bridge-a",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.2585,
+                27.862
+              ],
+              [
+                85.2615,
+                27.862
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "bridge-a",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "bridge-a",
+            "candidate_blocked": true,
+            "status": "candidate_blocked",
+            "length_m": 295.3,
+            "evidence_ids": [
+              "synthetic-exposure-001"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "road-h1",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.2615,
+                27.862
+              ],
+              [
+                85.2638,
+                27.8641
+              ],
+              [
+                85.266,
+                27.866
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "road-h1",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "road-h1",
+            "candidate_blocked": false,
+            "status": "not_exposed",
+            "length_m": 626.0,
+            "evidence_ids": []
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "road-c",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.263,
+                27.853
+              ],
+              [
+                85.2636,
+                27.856
+              ],
+              [
+                85.264,
+                27.859
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "road-c",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "road-c",
+            "candidate_blocked": true,
+            "status": "candidate_blocked",
+            "length_m": 671.0,
+            "evidence_ids": [
+              "synthetic-exposure-002"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "road-h2",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.264,
+                27.859
+              ],
+              [
+                85.2652,
+                27.8625
+              ],
+              [
+                85.266,
+                27.866
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "road-h2",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "road-h2",
+            "candidate_blocked": false,
+            "status": "not_exposed",
+            "length_m": 799.6,
+            "evidence_ids": []
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "road-d",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.263,
+                27.853
+              ],
+              [
+                85.2662,
+                27.8545
+              ],
+              [
+                85.2685,
+                27.857
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "road-d",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "road-d",
+            "candidate_blocked": false,
+            "status": "not_exposed",
+            "length_m": 713.2,
+            "evidence_ids": []
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "road-k",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.2685,
+                27.857
+              ],
+              [
+                85.2678,
+                27.8618
+              ],
+              [
+                85.266,
+                27.866
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "road-k",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "road-k",
+            "candidate_blocked": false,
+            "status": "not_exposed",
+            "length_m": 1032.3,
+            "evidence_ids": []
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "road-cx",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                85.2675,
+                27.8512
+              ],
+              [
+                85.2688,
+                27.8535
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "road-cx",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "edge_id": "road-cx",
+            "candidate_blocked": false,
+            "status": "not_exposed",
+            "length_m": 284.7,
+            "evidence_ids": [
+              "synthetic-graph-002"
+            ]
+          }
+        }
+      ]
+    },
+    "buildings": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": "training-hospital",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.2656,
+                  27.8656
+                ],
+                [
+                  85.2664,
+                  27.8656
+                ],
+                [
+                  85.2664,
+                  27.8664
+                ],
+                [
+                  85.2656,
+                  27.8664
+                ],
+                [
+                  85.2656,
+                  27.8656
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "training-hospital",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "status": "not_exposed",
+            "evidence_ids": [],
+            "amenity": "hospital",
+            "name": "Training hospital (synthetic)"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "bldg-001",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.253,
+                  27.8584
+                ],
+                [
+                  85.25340000000001,
+                  27.8584
+                ],
+                [
+                  85.25340000000001,
+                  27.8588
+                ],
+                [
+                  85.253,
+                  27.8588
+                ],
+                [
+                  85.253,
+                  27.8584
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "bldg-001",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "status": "not_exposed",
+            "evidence_ids": []
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "bldg-002",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.26039999999999,
+                  27.854300000000002
+                ],
+                [
+                  85.2608,
+                  27.854300000000002
+                ],
+                [
+                  85.2608,
+                  27.8547
+                ],
+                [
+                  85.26039999999999,
+                  27.8547
+                ],
+                [
+                  85.26039999999999,
+                  27.854300000000002
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "bldg-002",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "status": "exposed",
+            "evidence_ids": [
+              "synthetic-flood-001"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "bldg-003",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.2636,
+                  27.8563
+                ],
+                [
+                  85.26400000000001,
+                  27.8563
+                ],
+                [
+                  85.26400000000001,
+                  27.8567
+                ],
+                [
+                  85.2636,
+                  27.8567
+                ],
+                [
+                  85.2636,
+                  27.8563
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "bldg-003",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "status": "exposed",
+            "evidence_ids": [
+              "synthetic-flood-001"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "bldg-004",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.26299999999999,
+                  27.8531
+                ],
+                [
+                  85.2634,
+                  27.8531
+                ],
+                [
+                  85.2634,
+                  27.8535
+                ],
+                [
+                  85.26299999999999,
+                  27.8535
+                ],
+                [
+                  85.26299999999999,
+                  27.8531
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "bldg-004",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "status": "not_exposed",
+            "evidence_ids": []
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "bldg-005",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  85.2555,
+                  27.868100000000002
+                ],
+                [
+                  85.25590000000001,
+                  27.868100000000002
+                ],
+                [
+                  85.25590000000001,
+                  27.8685
+                ],
+                [
+                  85.2555,
+                  27.8685
+                ],
+                [
+                  85.2555,
+                  27.868100000000002
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_id": "bldg-005",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "status": "unknown",
+            "evidence_ids": []
+          }
+        }
+      ]
+    },
+    "settlements": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": "training-settlement-a",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              85.253,
+              27.858
+            ]
+          },
+          "properties": {
+            "feature_id": "training-settlement-a",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "name": "Settlement A (synthetic)",
+            "status": "potentially_isolated",
+            "evidence_ids": [
+              "synthetic-exposure-001"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "training-settlement-b",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              85.263,
+              27.853
+            ]
+          },
+          "properties": {
+            "feature_id": "training-settlement-b",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "name": "Settlement B (synthetic)",
+            "status": "connected",
+            "evidence_ids": [
+              "synthetic-exposure-002"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "training-settlement-c",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              85.2675,
+              27.8512
+            ]
+          },
+          "properties": {
+            "feature_id": "training-settlement-c",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "name": "Settlement C (synthetic)",
+            "status": "preexisting_disconnected",
+            "evidence_ids": [
+              "synthetic-graph-002"
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "training-settlement-d",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              85.2555,
+              27.8685
+            ]
+          },
+          "properties": {
+            "feature_id": "training-settlement-d",
+            "method_version": "synthetic-ui-v1",
+            "source_id": "synthetic-graph-ui-001",
+            "name": "Settlement D (synthetic)",
+            "status": "unknown_network",
+            "evidence_ids": [
+              "synthetic-snap-001"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "settlements": [
+    {
+      "settlement_id": "training-settlement-a",
+      "status": "potentially_isolated",
+      "baseline_facility_id": "training-hospital",
+      "baseline_route_edge_ids": [
+        "road-a",
+        "bridge-a",
+        "road-h1"
+      ],
+      "post_event_facility_id": null,
+      "post_event_route_edge_ids": [],
+      "candidate_cut_edge_ids": [
+        "bridge-a"
+      ],
+      "any_facility_access": false,
+      "evidence_ids": [
+        "synthetic-exposure-001"
+      ],
+      "reason": "The synthetic graph loses all facility routes if bridge-a is impassable. This is not a real flood finding."
+    },
+    {
+      "settlement_id": "training-settlement-b",
+      "status": "connected",
+      "baseline_facility_id": "training-hospital",
+      "baseline_route_edge_ids": [
+        "road-c",
+        "road-h2"
+      ],
+      "post_event_facility_id": "training-hospital",
+      "post_event_route_edge_ids": [
+        "road-d",
+        "road-k"
+      ],
+      "candidate_cut_edge_ids": [
+        "road-c"
+      ],
+      "any_facility_access": true,
+      "evidence_ids": [
+        "synthetic-exposure-002"
+      ],
+      "reason": "Baseline route crosses candidate-exposed road-c; a longer synthetic alternate route remains."
+    },
+    {
+      "settlement_id": "training-settlement-c",
+      "status": "preexisting_disconnected",
+      "baseline_facility_id": null,
+      "baseline_route_edge_ids": [],
+      "post_event_facility_id": null,
+      "post_event_route_edge_ids": [],
+      "candidate_cut_edge_ids": [],
+      "any_facility_access": false,
+      "evidence_ids": [
+        "synthetic-graph-002"
+      ],
+      "reason": "No pre-event route to any facility in the synthetic graph; not a flood impact."
+    },
+    {
+      "settlement_id": "training-settlement-d",
+      "status": "unknown_network",
+      "baseline_facility_id": null,
+      "baseline_route_edge_ids": [],
+      "post_event_facility_id": null,
+      "post_event_route_edge_ids": [],
+      "candidate_cut_edge_ids": [],
+      "any_facility_access": null,
+      "evidence_ids": [
+        "synthetic-snap-001"
+      ],
+      "reason": "Settlement lies outside the snapping tolerance of every road node; access is unknown."
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "synthetic-exposure-001",
+      "source_ids": [
+        "synthetic-graph-ui-001",
+        "synthetic-s1-after"
+      ],
+      "kind": "synthetic",
+      "description": "Invented candidate-blocked bridge inside the synthetic flood polygon.",
+      "method_version": "synthetic-ui-v1"
+    },
+    {
+      "evidence_id": "synthetic-exposure-002",
+      "source_ids": [
+        "synthetic-graph-ui-001",
+        "synthetic-s1-after"
+      ],
+      "kind": "synthetic",
+      "description": "Invented candidate exposure of road-c in a low-lying pocket.",
+      "method_version": "synthetic-ui-v1"
+    },
+    {
+      "evidence_id": "synthetic-flood-001",
+      "source_ids": [
+        "synthetic-s1-before",
+        "synthetic-s1-after"
+      ],
+      "kind": "synthetic",
+      "description": "Invented candidate flood polygons with heuristic flood_score (not a probability).",
+      "method_version": "synthetic-ui-v1"
+    },
+    {
+      "evidence_id": "synthetic-debris-001",
+      "source_ids": [
+        "synthetic-s1-before",
+        "synthetic-s1-after"
+      ],
+      "kind": "synthetic",
+      "description": "Invented radar-brightening patch: candidate disturbance, not proof of debris.",
+      "method_version": "synthetic-ui-v1"
+    },
+    {
+      "evidence_id": "synthetic-graph-002",
+      "source_ids": [
+        "synthetic-graph-ui-001"
+      ],
+      "kind": "synthetic",
+      "description": "Synthetic graph component with no facility before the event.",
+      "method_version": "synthetic-ui-v1"
+    },
+    {
+      "evidence_id": "synthetic-snap-001",
+      "source_ids": [
+        "synthetic-graph-ui-001"
+      ],
+      "kind": "synthetic",
+      "description": "Synthetic settlement beyond the snapping tolerance.",
+      "method_version": "synthetic-ui-v1"
+    }
+  ],
+  "limitations": [
+    "Synthetic UI fixture; no assertion about the real area represented by this bounding box.",
+    "No satellite detection, official-reference evaluation or actual drone telemetry.",
+    "Candidate exposure is not confirmed structural damage or road closure.",
+    "flood_score is a heuristic score, not a calibrated probability."
+  ]
+}
