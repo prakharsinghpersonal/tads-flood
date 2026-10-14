@@ -5,8 +5,8 @@ Branch `claude/mission-ui`, worktree `tads-flood-claude`.
 - Checkpoint 1: `3b348df` (pushed). Codex reviewed and integrated it.
 - Checkpoint 2 (2026-10-14): built on `e9fc50a` (fast-forward of
   `origin/codex/data-engine`, which contains `3b348df` plus Codex's backend and
-  its frontend integration fixes). **Commit hash: recorded by the human after
-  committing** (Claude does not run commit/push in this repo).
+  its frontend integration fixes). **Ready commit `29ff6d1`** (pushed to
+  `origin/claude/mission-ui` by the human).
 - No Codex-owned file was edited. Untracked copies of four handoff docs that
   blocked the fast-forward were moved, not deleted, to
   `../tads-flood-claude-untracked-backup-20261013/`; all were older drafts of the
