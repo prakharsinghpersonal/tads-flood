@@ -5,7 +5,7 @@ The human owns final Devpost submission. Deadline recorded in BUILD_PLAN:
 09:45 PDT. Confirm the current event page before submitting.
 
 ## Repository and runtime
-- [x] Public GitHub repository created; implementation on codex/data-engine.
+- [x] Public GitHub repository created; implementation on PKS/data-engine.
 - [x] Integrated Claude 830eec8 plus Codex HTML/metadata/language review fixes.
 - [x] Local real CDSE/historical OSM execution and actual local AI demonstrated.
 - [x] Required case comparison completed with poor results disclosed.

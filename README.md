@@ -1,5 +1,7 @@
 # TADS Flood
 
+Project owner: Prakhar Kumar Singh ([prakharsinghpersonal](https://github.com/prakharsinghpersonal)).
+
 An evidence-first flood assessment workspace: estimate flood exposure from
 satellite data, trace potentially severed road connections, and prepare a
 source-linked situation report. A separate TADS-inspired simulation explores
@@ -42,7 +44,7 @@ python scripts/export_contracts.py
 python -m uvicorn tads_flood.api:app --app-dir services/api/src --reload --port 8000
 ```
 
-The reviewed Claude UI checkpoint is included on `codex/data-engine`. Install its
+The reviewed Claude UI checkpoint is included on `PKS/data-engine`. Install its
 exact lockfile and start both local services from the repository root:
 
 ```sh

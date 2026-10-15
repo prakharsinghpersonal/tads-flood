@@ -4,7 +4,7 @@ Branch `claude/mission-ui`, worktree `tads-flood-claude`.
 
 ## Checkpoint 3 (2026-10-14): reliability T01–T10 and focused UI
 
-Base: fast-forward to `d76b8fd` (`origin/codex/data-engine`, includes `29ff6d1`
+Base: fast-forward to `d76b8fd` (`origin/PKS/data-engine`, includes `29ff6d1`
 and `cf01ee1`); the tree was clean, nothing was reset or discarded. **Commit
 hash: recorded by the human after committing** (Claude does not run git
 commit/push here). No Codex-owned file was edited: not `scripts/`, `services/`,
@@ -94,7 +94,7 @@ worktree, created from `requirements.lock` with Python 3.12. Codex's venv and
 
 - Checkpoint 1: `3b348df` (pushed). Codex reviewed and integrated it.
 - Checkpoint 2 (2026-10-14): built on `e9fc50a` (fast-forward of
-  `origin/codex/data-engine`, which contains `3b348df` plus Codex's backend and
+  `origin/PKS/data-engine`, which contains `3b348df` plus Codex's backend and
   its frontend integration fixes). **Ready commit `29ff6d1`** (pushed to
   `origin/claude/mission-ui` by the human).
 - No Codex-owned file was edited. Untracked copies of four handoff docs that

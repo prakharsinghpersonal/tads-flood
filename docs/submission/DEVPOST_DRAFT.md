@@ -55,7 +55,7 @@ Python, FastAPI, React, TypeScript, MapLibre, Sentinel-1, Copernicus DEM,
 OpenStreetMap, ohsome API, Ollama, SQLite, IndexedDB.
 
 ## Links to enter manually
-- Implementation: https://github.com/prakharsinghpersonal/tads-flood/tree/codex/data-engine
+- Implementation: https://github.com/prakharsinghpersonal/tads-flood/tree/PKS/data-engine
 - Public video: PENDING (exactly three minutes planned)
 - Optional deployed demo: PENDING; identify synthetic profile
 - Six-page report and generated one-page brief: see DELIVERY_CHECKLIST.md

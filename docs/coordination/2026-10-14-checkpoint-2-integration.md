@@ -1,7 +1,7 @@
 # Checkpoint 2 integration
 
 Codex reviewed and fast-forwarded Claude's ready code `29ff6d1` and status-only
-`cf01ee1` into `codex/data-engine`. Claude's checkout was not edited. Assessment
+`cf01ee1` into `PKS/data-engine`. Claude's checkout was not edited. Assessment
 schema remains 1.0.0; no provider or report contract changes were introduced.
 
 Independent local combined check, 2026-10-14:
@@ -27,7 +27,7 @@ One scoped change to Claude-owned `tests/e2e/api-live.spec.ts` requires the loca
 API when REQUIRE_LOCAL_API=1, and asserts the missing-model state in this
 credential-free profile. It retains optional skips for standalone frontend-only
 runs. This prevents a green combined CI caused by a skipped API flow. Claude
-should retain this change when merging latest `origin/codex/data-engine`.
+should retain this change when merging latest `origin/PKS/data-engine`.
 
 Next ownership agreement: Claude continues frontend boundary/integrity work in
 `docs/CLAUDE_NEXT.md` and may create submission narrative/checklist drafts under

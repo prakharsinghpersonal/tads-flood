@@ -1,7 +1,7 @@
 # Codex status — 14 October 2026
 
-Implementation branch: `codex/data-engine`; draft PR:
-https://github.com/prakharsinghpersonal/tads-flood/pull/1.
+Implementation branch: `PKS/data-engine`; draft PR:
+https://github.com/prakharsinghpersonal/tads-flood/pull/2.
 Claude checkpoints `29ff6d1`/`cf01ee1` and ready `830eec8` are integrated.
 Codex's review additionally guards HTML exports, cached scope metadata and
 copilot language changes. Claude has a separate final recorded-case QA task.

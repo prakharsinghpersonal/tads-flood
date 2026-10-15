@@ -9,7 +9,7 @@ unavailable in this profile; it never substitutes synthetic data for a live job.
 All responses carry X-TADS-Mode: synthetic-replay, and the assessment stays SYNTHETIC.
 
 Import the public repository into Vercel Hobby using your GitHub account. Choose
-the implementation branch (currently codex/data-engine), set Root Directory to
+the implementation branch (currently PKS/data-engine), set Root Directory to
 apps/web, Framework to Vite, Node.js to 22, install npm ci, build npm run build,
 and output dist. apps/web/vercel.json includes the API/health rewrites. No source
 or model credentials are required or should be added to this frontend project.

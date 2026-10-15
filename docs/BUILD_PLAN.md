@@ -163,7 +163,7 @@ automatic execution on reconnection. No hidden reference truth enters assessment
 ## 6. Half A — Codex: data, analysis and service
 
 Owned paths: `services/api/`, `tests/backend/`, `scripts/`, `contracts/`, Python
-dependencies, backend evaluation artifacts and CI. Branch: `codex/data-engine`.
+dependencies, backend evaluation artifacts and CI. Branch: `PKS/data-engine`.
 
 1. Freeze assessment/request schemas, route names and synthetic response fixture.
 2. Implement validation, scene quality, graph isolation and deterministic facts;

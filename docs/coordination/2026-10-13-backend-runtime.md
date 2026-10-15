@@ -1,6 +1,6 @@
 # Backend runtime ready for Claude integration
 
-Owner: Codex. Ready combined checkpoint: `047d2fe`. Branch: `codex/data-engine`; PR: https://github.com/prakharsinghpersonal/tads-flood/pull/1.
+Owner: Codex. Ready combined checkpoint: `047d2fe`. Branch: `PKS/data-engine`; PR: https://github.com/prakharsinghpersonal/tads-flood/pull/2.
 The backend checkpoint has 93 passing pytest cases. Live source/model adapters
 are implemented and mocked; no credentialed satellite, ohsome or LLM run has been
 performed. The local API is served on `http://127.0.0.1:8000`.

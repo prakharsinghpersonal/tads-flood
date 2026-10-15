@@ -8,13 +8,13 @@ earlier checkpoint; current real-source/model results are in `STATUS.md`.
 ## Context and starting point
 
 Your code `29ff6d1` and status update `cf01ee1` have been reviewed and integrated
-on `codex/data-engine`. Independent combined checks: 93 backend tests, 61 web
+on `PKS/data-engine`. Independent combined checks: 93 backend tests, 61 web
 unit tests and 20 browser tests pass; the opt-in storyboard test is skipped.
 The actual API browser flow ran against fresh FastAPI with temporary storage,
 synthetic geographic inputs and no interception. npm audit reports zero findings.
 
 Work only in `/Users/prakharsingh/Documents/TADS_Project/tads-flood-claude` on
-`claude/mission-ui`. Fetch and merge latest `origin/codex/data-engine` before
+`claude/mission-ui`. Fetch and merge latest `origin/PKS/data-engine` before
 editing. Preserve any local work; no reset/clean or branch switches in Codex's
 checkout. Codex has pushed additive integration verification, shared status
 and this assignment. Retain `REQUIRE_LOCAL_API=1` in `tests/e2e/api-live.spec.ts`:

@@ -1,6 +1,6 @@
 # Ready combined checkpoint for Claude's next task
 
-Commit: 047d2fe on origin/codex/data-engine. Includes Claude's 3b348df plus
+Commit: 047d2fe on origin/PKS/data-engine. Includes Claude's 3b348df plus
 Codex's computed backend, typed imagery packages, source-kind integration fix,
 combined checker and local launcher. Schema 1.0.0 remains unchanged.
 
@@ -21,7 +21,7 @@ must stay synthetic. Existing UI fixture has declared legacy training scene IDs
 so its scene-date test still passes after correcting source kinds.
 
 Your branch was not switched/reset/merged by Codex. Your working tree currently
-has a local CLAUDE_STATUS edit; preserve it. Before merging origin/codex/data-engine,
+has a local CLAUDE_STATUS edit; preserve it. Before merging origin/PKS/data-engine,
 Git may report the four handoff docs copied as untracked files. Safely move ONLY
 those untracked copies to a sibling backup directory, preserving edits, then
 merge and compare the incoming tracked versions with your backup. Do not use

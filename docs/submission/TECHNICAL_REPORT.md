@@ -100,7 +100,7 @@ Measured draft checks: 110 backend tests, 130 frontend tests and 21 browser test
 
 Reproduce using requirements.lock, the editable Python package, npm ci --prefix apps/web and scripts/dev.py. run_assessment.py executes real scopes; evaluate_reference.py checks independent CEMS data; check_local_ai.py calls the actual local model; check_workspace.py --browser isolates engineering tests from operator credentials.
 
-Public repository: github.com/prakharsinghpersonal/tads-flood (implementation branch codex/data-engine). Codex assisted backend/integration; Claude Code assisted UI/mission. Human entrants own eligibility, registration, Nepali review and final submission. TADS is prior conceptual research; no research archives or results are included.
+Public repository: github.com/prakharsinghpersonal/tads-flood (implementation branch PKS/data-engine). Codex assisted backend/integration; Claude Code assisted UI/mission. Human entrants own eligibility, registration, Nepali review and final submission. TADS is prior conceptual research; no research archives or results are included.
 
 - Contains modified Copernicus Sentinel data 2026.
 - Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
