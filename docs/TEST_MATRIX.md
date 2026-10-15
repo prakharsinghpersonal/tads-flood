@@ -1,8 +1,10 @@
 # Acceptance and test matrix
 
 Status at planning: these are required cases, not a claim that all pass.
-Codex's first executable cases cover validation, graph logic, scene quality,
-report boundaries and API fixture behaviour. Record actual counts in STATUS.md.
+Codex's executable cases cover validation, metric raster/graph logic, provider
+contracts with mocks, job lifecycle, provenance/cache integrity, report grounding
+and fixture behaviour. Record measured counts in STATUS.md. A unit-test count
+does not indicate that every acceptance row or real-data release gate has passed.
 
 | ID | Owner | Scenario/input | Expected result |
 |---|---|---|---|
@@ -79,3 +81,30 @@ report boundaries and API fixture behaviour. Record actual counts in STATUS.md.
 Synthetic fixture tests cannot establish mapping accuracy, model grounding on
 real data, real drone autonomy, or competition eligibility. Retain failing cases.
 
+## Backend checkpoint evidence
+
+The runtime checkpoint has 93 passing backend tests. Representative executable
+coverage: V01–V03 request/budget guards; P01–P04/P07–P08 compatibility, shadows,
+permanent water and nodata; P10–P11 mock failures/retry budgets; D01–D03 historical
+input and cache integrity; G01–G08 graph counterexamples; A01–A05 claim selection,
+refusal and deterministic bilingual previews. Additional runtime tests cover
+queue saturation, cancellation, restart, snapshots and asset checksums.
+
+These groupings include synthetic/mocked cases only. Optical provider execution,
+partial-coverage interpretation across multiple possible routes, duplicate real
+OSM fragments, prompt-injection robustness against an actual model, real provider
+performance, required-case-study evaluation, holdout AOI execution and final
+delivery evidence remain pending or partial. Refer to the named test files rather
+than treating this list as a blanket pass for a whole acceptance group.
+
+## Combined checkpoint 2 evidence
+
+The independently checked combined workspace passes 93 backend tests, 61 frontend
+unit tests and 20 browser tests. The browser API flow uses a fresh actual FastAPI
+process and computed synthetic scene without interception; CI now requires it
+to run. It checks image decoding, deterministic brief, explicit missing-model
+state, server-hashed package save and offline image reload. Recorded-response
+flows cover image tampering, missing packages, facility/cut selection, UI errors,
+keyboard/layout and simulation separation. One screenshot-generation case is
+opt-in and skipped during the normal suite. See the integration record and
+CLAUDE_STATUS.md for scope; these counts do not close E01/E02 or the actual AI gate.

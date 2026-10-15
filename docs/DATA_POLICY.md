@@ -32,11 +32,14 @@ old v1 GeoJSON shape. Implement the adapter against documented/observed v2
 responses. Configure `OHSOME_API_KEY` server-side and verify quotas. Do not keep
 retrying denied legacy extraction or replace historical OSM with current OSM.
 
-These references describe possible integrations. A link in this file does not
-mean that credentials, quotas, processed imagery, mission hardware or reference
-products have been verified. CDSE requires the user's own access configuration.
+Actual keyed v2 extraction subsequently succeeded: 727 smoke-probe features,
+all carrying verified pre-snapshot edit timestamps. Authenticated CDSE Process
+execution and source tile/date checks also passed. See STATUS.md for actual runs.
+A documentation link alone remains insufficient evidence of execution or quotas.
+CDSE requires the user's own access configuration.
 Never request secrets in chat or commit them. The LLM provider is configurable;
-we have not assumed a free model subscription or supplied API credits.
+no API credits are supplied. Actual local Ollama execution uses an already
+installed model on this Mac; no model download or paid subscription was created.
 
 ## Mandatory input boundary
 
@@ -73,12 +76,15 @@ copilot route does not require claiming those datasets were used.
 
 1. Is reuse of the pre-existing TADS algorithm/code permitted with clear disclosure
    and a new satellite/infrastructure application built during this event?
-2. Confirm the required EMSR927 reference products and their case-study linkage;
-   the current web read returns only the activation site's shell.
+2. The official EMSR927 AOI01 product has now been retrieved from the official
+   rapid-mapping dashboard API and compared separately. Its observed-event class
+   is Landslide. Clarify the expected interpretation if the organizer intends a
+   different reference class/product; do not present it as water-only ground truth.
 3. Does calibrated Sentinel Hub processing meet the "raw satellite data" input
    requirement, provided no official damage layers are used?
 4. Clarify eligibility if the human entrant is not a current student.
 
 We do not contact organizers or post messages automatically. Research reuse,
-live source access and official reference verification remain explicit release
-risks. Do not claim a successful rescue or predict a glacier collapse.
+eligibility remain human-owned. Live access and the official reference comparison
+are recorded, but the poor mapping result remains a material limitation.
+Do not claim a successful rescue or predict a glacier collapse.

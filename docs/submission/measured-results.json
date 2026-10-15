@@ -1,0 +1,171 @@
+{
+  "status": "draft_release_evidence",
+  "pipeline_version": "flood-assessment-v1.4",
+  "assessment_schema": "1.0.0",
+  "actual_runs": [
+    {
+      "recorded_at": "2026-10-14T08:58:23.733231+00:00",
+      "mode": "live",
+      "pipeline_version": "flood-assessment-v1.4",
+      "bbox": [
+        85.3232,
+        28.149117,
+        85.348268,
+        28.188188
+      ],
+      "event_date": "2026-08-26",
+      "python": "3.12.14",
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "purpose": "actual pipeline execution; reference evaluation is separate",
+      "pipeline_seconds": 7.919,
+      "peak_process_rss_mib": 135.89,
+      "status": "passed",
+      "assessment_id": "live-c9157aa9850da3ddb9bb20f2",
+      "summary": {
+        "candidate_flood_area_m2": 3558.991267692615,
+        "exposed_asset_count": 11,
+        "potentially_isolated_count": 0,
+        "unknown_network_count": 2
+      },
+      "quality": {
+        "status": "partial",
+        "valid_fraction": 0.4180059684320282,
+        "warnings": [
+          "Candidate exposure is not confirmed damage, bridge failure or road closure.",
+          "Backscatter-change scores are heuristic, not calibrated flood probabilities.",
+          "Steep DEM slopes are masked; full radar layover/shadow modeling is not implemented.",
+          "Optical corroboration unavailable; candidate results are SAR-only.",
+          "Brightening is a candidate disturbance layer, not validated debris segmentation.",
+          "Road graph uses geometric noding; OSM turn restrictions and node-ID semantics are not fully represented.",
+          "Road access is assessed within the requested AOI, not the entire regional network.",
+          "Only mapped vehicle-access roads and facilities are considered; apparent cuts at the AOI boundary can be artifacts.",
+          "DEM acquired_at is the server retrieval time, not an original elevation survey date."
+        ],
+        "method_version": "sar-change-baseline-v1"
+      },
+      "total_seconds": 27.787
+    },
+    {
+      "recorded_at": "2026-10-14T08:58:24.785394+00:00",
+      "mode": "live",
+      "pipeline_version": "flood-assessment-v1.4",
+      "bbox": [
+        85.357083,
+        28.242372,
+        85.380579,
+        28.279944
+      ],
+      "event_date": "2026-09-01",
+      "python": "3.12.14",
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "purpose": "actual pipeline execution; reference evaluation is separate",
+      "pipeline_seconds": 5.981,
+      "peak_process_rss_mib": 124.64,
+      "status": "passed",
+      "assessment_id": "live-3077468196aa1313e23e7fbb",
+      "summary": {
+        "candidate_flood_area_m2": 9511.24465515989,
+        "exposed_asset_count": 1,
+        "potentially_isolated_count": 0,
+        "unknown_network_count": 1
+      },
+      "quality": {
+        "status": "partial",
+        "valid_fraction": 0.4207282913165266,
+        "warnings": [
+          "Candidate exposure is not confirmed damage, bridge failure or road closure.",
+          "Backscatter-change scores are heuristic, not calibrated flood probabilities.",
+          "Steep DEM slopes are masked; full radar layover/shadow modeling is not implemented.",
+          "Optical corroboration unavailable; candidate results are SAR-only.",
+          "Brightening is a candidate disturbance layer, not validated debris segmentation.",
+          "Road graph uses geometric noding; OSM turn restrictions and node-ID semantics are not fully represented.",
+          "Road access is assessed within the requested AOI, not the entire regional network.",
+          "Only mapped vehicle-access roads and facilities are considered; apparent cuts at the AOI boundary can be artifacts.",
+          "DEM acquired_at is the server retrieval time, not an original elevation survey date."
+        ],
+        "method_version": "sar-change-baseline-v1"
+      },
+      "total_seconds": 5.991
+    }
+  ],
+  "reference_comparison": {
+    "assessment_id": "live-c9157aa9850da3ddb9bb20f2",
+    "mode": "live",
+    "activation": "EMSR927",
+    "comparison": "candidate flood + unvalidated disturbance versus photo-interpreted observed event",
+    "reference_classes": [
+      "Landslide"
+    ],
+    "metrics_within_valid_coverage": {
+      "valid_cells": 3809,
+      "true_positive": 9,
+      "false_positive": 20,
+      "false_negative": 1543,
+      "true_negative": 2237,
+      "iou": 0.0057251908396946565,
+      "precision": 0.3103448275862069,
+      "recall": 0.005798969072164949,
+      "f1": 0.011385199240986717,
+      "warning": "Reference coverage must be independent of threshold selection and inference inputs"
+    },
+    "reference_coverage_cells": 8741,
+    "joint_coverage_fraction": 0.4357624985699577,
+    "reference_positive_cells_total": 2815,
+    "reference_positive_cells_without_valid_radar": 1263,
+    "grid": {
+      "epsg": 32645,
+      "width": 127,
+      "height": 219,
+      "pixel_area_m2": 395.44347418806836
+    },
+    "reference_hashes": {
+      "imageFootprintA.geojson": "1a23115da274741819ddee220ede1c926cad02e8bc428135bb87a04004c5b711",
+      "builtUpP.geojson": "4bb2766ac1c449d2d052f5a65bfc146b14f56da7d70d48d6577bd1c7b57420f2",
+      "observedEventA.geojson": "e4d0e530499de348c9b0b10c197a130c872c6ed7ed50d7bb367d5d080a031eb0",
+      "areaOfInterestA.geojson": "a4a17dc9bfd6084f6c6e26768d1d1fb00116d9103e26736ecbc80e73732dde36",
+      "transportationL.geojson": "88bdc83dbbe1ffe76327b3a23082f8b083432a7af425785fa8d7d3eac369b900"
+    },
+    "attribution": "European Union, Copernicus Emergency Management Service data",
+    "usage": "evaluation_only",
+    "limits": [
+      "Reference classes differ from a water-only mask; this is not a flood-water segmentation score.",
+      "Metrics exclude unavailable terrain/radar cells; coverage and excluded positives are reported separately.",
+      "20m-scale grid with center rasterization; optical photo-interpretation and radar observe different times/resolutions.",
+      "Default thresholds were frozen before comparison; no threshold tuning used these reference labels."
+    ]
+  },
+  "engineering_checks": {
+    "backend_tests": 110,
+    "frontend_tests": 130,
+    "browser_tests": 21,
+    "storyboard_skipped": 1,
+    "contracts_reproduced": true,
+    "frontend_audit_findings": 0,
+    "input_mode": "synthetic engineering fixtures; actual API integration has no interception"
+  },
+  "actual_ai": {
+    "provider": "local_ollama",
+    "model": "llama3.1:8b",
+    "development_model_calls": 4,
+    "deterministic_injection_refusals": 1,
+    "live_case_languages": [
+      "en",
+      "ne"
+    ],
+    "nepali_fluent_review": false,
+    "cold_supported_query_seconds": 43.56,
+    "scope": "small development sample; not a model benchmark"
+  },
+  "pending": [
+    "Claude final recorded-case UI QA",
+    "fluent Nepali review",
+    "final video",
+    "human eligibility/submission",
+    "optional deployed-domain verification"
+  ],
+  "limits": [
+    "Weak landslide proxy, not a water-only segmentation accuracy result.",
+    "Separate Timure execution has no independent holdout accuracy score.",
+    "Credentials and raw/reference archives are excluded."
+  ]
+}

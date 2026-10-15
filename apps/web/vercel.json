@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/v1/:path*", "destination": "/api/replay?__tads_route=/api/v1/:path*" },
+    { "source": "/health", "destination": "/api/replay?__tads_route=/health" }
+  ],
+  "headers": [
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/asset-manifest.json", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}

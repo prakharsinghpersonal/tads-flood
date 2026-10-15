@@ -1,0 +1,109 @@
+# TADS Flood technical report - review draft
+
+Measured sources and evaluation; language/UI/human submission checks remain open.
+
+## 1. Problem and working system
+
+TADS Flood is an evidence-led flood-exposure workspace for Track B. It connects an area/date request to satellite acquisition, candidate change masks, historical infrastructure, mapped road access and a cited situation brief. A separate TADS-inspired inspection simulation explores offline planning; it is not a real drone or rescue system.
+
+The Python/FastAPI service and React/TypeScript/MapLibre interface support real authenticated source execution, metric exposure and topology, persistent bounded jobs, before/after imagery, source inspection, bilingual model-selected facts and exact-byte offline packages. The system executes as an educational prototype. Mapping quality is weak on the measured landslide reference; fluent Nepali review and final recorded-case UI QA remain open.
+
+The main decision chain is satellite candidate change -> exposed road -> baseline/post-event facility route -> settlement status -> cited brief. Every result carries scope, mode, source IDs, acquisition time, method and limits. Candidate exposure never becomes a claim of confirmed destruction or a safe route.
+
+| Component | Implementation |
+|---|---|
+| Inputs | CDSE S1/S2/DEM; historical ohsome OSM |
+| Service | FastAPI, Pydantic, SQLite, content-addressed cache |
+| UI/offline | React, MapLibre, IndexedDB, service worker |
+| AI | Actual local Ollama llama3.1:8b fact selection |
+| Hosting | Local full stack; optional synthetic Vercel replay |
+
+## 2. Sources, provenance and preprocessing
+
+Allowed inference inputs are Sentinel-1, optional clear Sentinel-2, Copernicus DEM and pre-event OpenStreetMap. CEMS products remain in data/reference for evaluation; they are never passed to the prediction pipeline. No original TADS archives, xBD annotation priors or research datasets are imported.
+
+S1 pairing requires explicit matching relative orbit, direction and VV-compatible polarization. Catalogue windows span 24 days before and 18 days after the event. Exact official metadata resolves omitted relative orbit. The Process API uses Gamma0 terrain backscatter, orthorectification, Copernicus 30m DEM and Lee 5x5 filtering. ORBIT userdata supplies product IDs/dates, which must match selected catalogue inputs before use.
+
+One aligned center-UTM grid starts near 20m cells and coarsens within a 1024-cell side budget. VV, dataMask and shadowMask are retained; finite DEM slopes above 30 degrees are excluded. Missing coverage remains unknown. The projected processing rectangle can slightly exceed the geographic request; exact clipping is not implemented.
+
+Historical ohsome extraction requests midnight UTC on the day before the event. Observed v2 geom/edit_timestamp fields and standard GeoParquet geometry/timestamp fields are supported. Versions after the requested snapshot are rejected. Raw inputs, metadata and previews are checksummed; source IDs/time and licenses remain inspectable.
+
+| Setting | Value |
+|---|---|
+| Assessment schema | 1.0.0 |
+| Pipeline / radar method | v1.4 / sar-change-baseline-v1 |
+| S1 selection | Same relative orbit, direction and VV polarization |
+| OSM snapshot | Event minus one day, midnight UTC |
+| Budgets | 0.5 degrees per axis; explicit raster/feature limits |
+
+## 3. Candidates, infrastructure and access
+
+The hand-set new-water rule is before > -16dB, after <= -16dB and drop >=3dB, within jointly valid coverage. Already-dark water is excluded. Brightening >=6dB forms an unvalidated disturbance candidate. This is not trained segmentation, validated debris detection or a calibrated probability. Clear S2 MNDWI can flag contradictions; cloud-obscured or absent optical data leaves SAR-only inference.
+
+Metric intersections flag roads at more than 1m candidate overlap and buildings at positive overlap area, counting stable source IDs once. Less than 95% comparison coverage makes road/building exposure unknown. Hospital/clinic polygons can be both facilities and exposed footprints. Geometric exposure is not an observed damage grade.
+
+Historical vehicle roads are geometrically noded with bridge/tunnel/layer separation and one-way direction. Settlements/facilities attach to lines within 200m; lines split at the attachment. Baseline shortest paths are compared with paths after conditionally removing exposed edges. A farther reachable facility prevents declaring isolation merely because a nearest route was lost.
+
+Connected, potentially_isolated, preexisting_disconnected and unknown_network stay distinct. Missing facilities or route coverage never become safe or verified-disconnected conclusions. Finite boundaries, incomplete turn restrictions and unresolved physical passability limit the graph.
+
+| Output | Meaning |
+|---|---|
+| Candidate flood | Heuristic backscatter change |
+| Candidate disturbance | Unvalidated brightening; multiple possible causes |
+| Exposed asset | Candidate overlap, not confirmed damage |
+| Potentially isolated | Conditional loss of mapped facility routes |
+| Unknown network | Insufficient mapping or coverage |
+
+## 4. Grounded AI and offline control
+
+The selected AI route is a situation-report copilot. A model selects IDs from a bounded approved fact menu. The backend rejects unknown, duplicate, incomplete and extra-field outputs. Code renders every quantity, sentence and evidence citation from computed facts; the model supplies neither numerical values nor outside disaster knowledge.
+
+The installed llama3.1:8b model completed four actual selection/refusal checks on synthetic input. A fifth casualty-injection question was refused before any model call. Phi3 mini incorrectly refused a supported question and was not selected as the recommended model. This small development sample is not a broad model benchmark.
+
+The live Syapru Besi result was queried in English and Nepali. Both actual model calls selected the same approved isolation and unknown-access facts, preserving quantities and citations. Nepali wording comes from unreviewed templates; its DRAFT label remains. Deterministic briefs remain explicitly templates, and absent configuration gives an error.
+
+Offline packages retain exact backend snapshot bytes, radar PNGs and backend-derived documents. SHA-256 is checked before save and on reopen, with atomic IndexedDB writes and migration/integrity tests. Internet loss differs from simulated radio loss: received telemetry freezes, commands await acknowledgement, expired requests require review and duplicate events are deduplicated.
+
+| Measured AI sample | Result |
+|---|---|
+| Isolation EN / NE | Approved isolation fact selected |
+| Unknown access | Approved unknown-access fact selected |
+| Unrelated financial question | Actual model refusal |
+| Casualty injection | Code refusal; no model call |
+| Nepali wording | Numerical/citation agreement; fluent review pending |
+
+## 5. Actual runs and reference comparison
+
+Syapru Besi: area [85.3232,28.149117,85.348268,28.188188], event 2026-08-26. The live pipeline completed in 7.92s before AI, with peak Python RSS 135.89MiB on the recorded Mac runtime. Coverage was 41.8%, candidate flood area 3559m2, 11 exposed assets, zero potentially isolated and two unknown-access settlements. These are candidate outputs, not confirmed disaster totals.
+
+Separate Timure scope: [85.357083,28.242372,85.380579,28.279944], date 2026-09-01. It completed in 5.98s, with peak Python RSS 124.64MiB and 42.1% coverage. This demonstrates another area/date executing without tuning; no holdout accuracy score is claimed.
+
+The official EMSR927 AOI01 observed-event layer is Landslide, interpreted from optical imagery. We compare the combined flood/disturbance candidate proxy with that extent over the official AOI/damage-image footprint and jointly valid radar/terrain cells. This is not a water-only flood segmentation score.
+
+The overlap is poor: IoU 0.0057, precision 0.3103, recall 0.0058, F1 0.0114. Joint coverage is 43.6%. Excluded positive cells are reported separately. The baseline misses most mapped landslide damage; no post-hoc threshold tuning used this reference.
+
+| Comparison | Within jointly valid coverage |
+|---|---|
+| Valid cells | 3,809 |
+| TP / FP / FN / TN | 9 / 20 / 1,543 / 2,237 |
+| IoU / F1 | 0.0057 / 0.0114 |
+| Joint reference coverage | 43.6% |
+| Conclusion | Weak proxy; mapping accuracy is not validated |
+
+## 6. Limits, reproducibility and credits
+
+This prototype cannot predict sudden glacier collapse, verify closures, detect survivors, infer casualties or control real aircraft. Satellite revisit/timing can miss transient water. Terrain masking removes much of a steep valley; brightness changes have non-damage causes. The measured reference result is weak and the disturbance layer is not validated debris segmentation.
+
+One persistent API process provides two workers and eight queued jobs. SQLite/cache requires writable storage. Docker configuration is prepared but unbuilt because the local daemon is unavailable. The optional Vercel site serves synthetic replay; public live processing/model execution needs a separate API host. Neither profile is called deployed without a domain check.
+
+Measured draft checks: 110 backend tests, 130 frontend tests and 21 browser tests pass, with one opt-in storyboard case skipped. Contracts, dependencies, build/typecheck and bundle secret checks pass. Hosted replay hashes/errors and its browser/offline flow also pass locally. Claude owns the final recorded-real-case UI QA pass.
+
+Reproduce using requirements.lock, the editable Python package, npm ci --prefix apps/web and scripts/dev.py. run_assessment.py executes real scopes; evaluate_reference.py checks independent CEMS data; check_local_ai.py calls the actual local model; check_workspace.py --browser isolates engineering tests from operator credentials.
+
+Public repository: github.com/prakharsinghpersonal/tads-flood (implementation branch PKS/data-engine). Codex assisted backend/integration; Claude Code assisted UI/mission. Human entrants own eligibility, registration, Nepali review and final submission. TADS is prior conceptual research; no research archives or results are included.
+
+- Contains modified Copernicus Sentinel data 2026.
+- Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
+- © OpenStreetMap contributors.
+- European Union, Copernicus Emergency Management Service data.
+- References: documentation.dataspace.copernicus.eu; docs.ohsome.org/ohsome-api/v2; mapping.emergency.copernicus.eu/activations/EMSR927; docs.ollama.com/capabilities/structured-outputs.

@@ -17,5 +17,7 @@ data/cache/
 data/raw/
 data/reference/
 artifacts/
+output/
+tmp/
 .DS_Store
 *.log

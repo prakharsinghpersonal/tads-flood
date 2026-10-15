@@ -1,0 +1,34 @@
+name: API browser integration
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install --no-deps -e .
+      - run: npm ci --prefix apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: python scripts/check_integration.py
+      - run: node scripts/check_hosted_replay.mjs
+      - run: python scripts/check_integration.py --hosted-replay
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-browser-results
+          path: apps/web/test-results
